@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "api/public-config.js", "use": "@vercel/node" },
+    { "src": "**", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/public-config", "dest": "/api/public-config.js" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
