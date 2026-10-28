@@ -1,5 +1,16 @@
 {
   "name": "cohort-vol-1",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "scripts": {
+    "build:supabase": "esbuild src/portal/index.js --bundle --platform=browser --format=esm --outfile=vendor/auth.js",
+    "build": "npm run build:supabase",
+    "dev": "node --env-file=.env server.mjs"
+  }
 }

@@ -42,7 +42,8 @@ createServer(async (request, response) => {
     return;
   }
 
-  const relativePath = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);
+  const requestPath = url.pathname.startsWith('/p/') ? '/index.html' : url.pathname;
+  const relativePath = decodeURIComponent(requestPath === '/' ? '/index.html' : requestPath);
   if (relativePath.split('/').some(part => part.startsWith('.'))) {
     response.writeHead(404);
     response.end('Not found');
@@ -70,5 +71,5 @@ createServer(async (request, response) => {
     response.end('Not found');
   }
 }).listen(port, '127.0.0.1', () => {
-  console.log(`Gully is running at http://localhost:${port}`);
+  console.log(`Cohort is running at http://localhost:${port}`);
 });

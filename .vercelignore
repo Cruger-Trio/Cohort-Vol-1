@@ -4,3 +4,5 @@
 .git
 .vercel
 node_modules
+
+.tmp/

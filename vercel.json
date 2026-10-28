@@ -2,10 +2,12 @@
   "version": 2,
   "builds": [
     { "src": "api/public-config.js", "use": "@vercel/node" },
+    { "src": "api/public-product.js", "use": "@vercel/node" },
     { "src": "**", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/public-config", "dest": "/api/public-config.js" },
+    { "src": "/p/([^/]+)/([^/]+)", "dest": "/api/public-product.js?path=$1/$2" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]

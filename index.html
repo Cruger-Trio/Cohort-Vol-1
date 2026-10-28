@@ -5,25 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#f7f6f1" />
   <meta name="description" content="India's home for independent creators. Discover digital products, memberships and communities." />
-  <title>Gully — Good things, made by creators</title>
+  <title>Cohort — Good things, made by creators</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=customers-pricing-v1" />
+  <link rel="stylesheet" href="/styles.css?v=cohort-v1" />
+  <link rel="stylesheet" href="/styles/creator-onboarding.css?v=cohort-v1" />
 </head>
 <body>
   <div class="announcement"><span class="spark">✳</span> Your next favourite thing is made in India <a href="#explore">Explore the marketplace <span>↗</span></a></div>
   <header class="topbar">
-    <a class="brand" href="#home" aria-label="Gully home"><span class="brand-mark">g</span><span>gully<span class="brand-dot">.</span></span></a>
+    <a class="brand" href="#home" aria-label="Cohort home"><span class="brand-mark">C</span><span>cohort<span class="brand-dot">.</span></span></a>
     <nav class="main-nav" aria-label="Main navigation">
       <a href="#explore" data-nav="explore">Explore</a><a href="#communities" data-nav="communities">Communities</a><a href="#creators" data-nav="creators">For creators</a>
     </nav>
-    <div class="nav-actions"><button class="icon-button" id="search-toggle" aria-label="Search">⌕</button><a class="login-link" href="#login">Log in</a><a class="button button-dark button-sm" href="#signup">Start selling <span>↗</span></a><button class="mobile-menu" id="mobile-menu" aria-label="Open menu">☰</button></div>
+    <div class="nav-actions"><button class="icon-button" id="search-toggle" aria-label="Search">⌕</button><a class="login-link" href="#login">Log in</a><a class="button button-dark button-sm" href="#signup-creator">I’m a creator <span>↗</span></a><button class="mobile-menu" id="mobile-menu" aria-label="Open menu">☰</button></div>
   </header>
   <main id="app"></main>
-  <footer class="footer"><div class="footer-main"><a class="brand brand-footer" href="#home"><span class="brand-mark">g</span><span>gully<span class="brand-dot">.</span></span></a><p>Good things, made by creators.<br>Made for India. ✳</p><div class="footer-links"><div><b>Explore</b><a href="#explore">Digital products</a><a href="#communities">Communities</a><a href="#explore">Memberships</a></div><div><b>Make a living</b><a href="#creators">Start selling</a><a href="#creators">Creator guide</a><a href="#login">Log in</a></div><div><b>Gully</b><a href="#about">Our story</a><a href="#help">Help & support</a><a href="#privacy">Privacy</a></div></div></div><div class="footer-bottom"><span>© 2026 Gully Technologies Pvt. Ltd.</span><span>Made with ☺ in India&nbsp; · &nbsp;INR ₹</span></div></footer>
+  <footer class="footer"><div class="footer-main"><a class="brand brand-footer" href="#home"><span class="brand-mark">C</span><span>cohort<span class="brand-dot">.</span></span></a><p>Good things, made by creators.<br>Made for India. ✳</p><div class="footer-links"><div><b>Explore</b><a href="#explore">Digital products</a><a href="#communities">Communities</a><a href="#explore">Memberships</a></div><div><b>Make a living</b><a href="#creators">Start selling</a><a href="#creators">Creator guide</a><a href="#login">Log in</a></div><div><b>Cohort</b><a href="#about">Our story</a><a href="#help">Help & support</a><a href="#privacy">Privacy</a></div></div></div><div class="footer-bottom"><span>© 2026 Cohort Technologies Pvt. Ltd.</span><span>Made with ☺ in India&nbsp; · &nbsp;INR ₹</span></div></footer>
   <div class="toast" id="toast" role="status"></div>
-  <script src="app.js"></script>
-  <script type="module" src="auth.js?v=customers-pricing-v1"></script>
+  <script type="module" src="/src/marketplace/app.js"></script>
+  <script type="module" src="/vendor/auth.js"></script>
 </body>
 </html>
