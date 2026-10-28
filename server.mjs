@@ -1,8 +1,9 @@
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = resolve('.');
+const root = resolve(fileURLToPath(new URL('.', import.meta.url)));
 const port = Number(process.env.PORT || 4173);
 const publicConfig = {
   url: process.env.SUPABASE_URL,
