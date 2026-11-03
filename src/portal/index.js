@@ -7,6 +7,7 @@ import { businessPayments } from './business/payments.js';
 import { businessHome, businessAnalytics } from './business/analytics.js';
 import { portalSubpage, openProfileEditor } from './personal.js';
 import { creatorOnboarding } from './onboarding.js';
+import { businessCommunity, memberCommunity, memberCommunities, loadCommunityFeed } from './community.js';
 
 const app = document.querySelector('#app');
 for (const key of ['portal-theme', 'analytics-hidden', 'insights', 'marketplace-query', 'business-query']) {
@@ -71,9 +72,9 @@ function portalShell(content, active='profile') {
   const name=displayName(), business=getBusiness();
   return `<div class="portal-app"><header class="portal-topbar"><a class="portal-brand" href="#portal/profile"><span class="brand-mark">C</span> Cohort</a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search Cohort" aria-label="Search Cohort"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><button class="portal-icon-button" data-notifications aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button><button class="portal-account-button" data-menu-toggle aria-expanded="false"><span class="portal-avatar">${escapeHTML(initialsFor(name))}</span><span class="account-name">${escapeHTML(name)}</span><span aria-hidden="true">v</span></button><div class="portal-account-menu" id="portal-account-menu" hidden><div class="account-menu-head"><span class="portal-avatar">${escapeHTML(initialsFor(name))}</span><span><b>${escapeHTML(name)}</b><small>${escapeHTML(currentUser?.email||'')}</small></span></div><a href="#portal/profile">View profile</a><a href="#portal/resolution">Resolution center</a><a href="#portal/orders">Orders</a><a href="#portal/library">My library</a><a href="#portal/settings">Settings</a><a href="#portal/help">Help and support</a><a href="#portal/language">Language</a><a href="#portal/legal">Legal</a><button data-signout>Sign out</button><div class="theme-picks"><button data-theme="dark">Dark</button><button data-theme="light">Light</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar"><div class="portal-workspace-switch"><button class="workspace-selected">${escapeHTML(initialsFor(name))}</button>${business?`<a class="workspace-business" href="#business/home" title="Open ${escapeHTML(business.name)}">${escapeHTML(initialsFor(business.name))}</a>`:''}${business?`<button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add business">+</button>`:`<a href="#portal/create-business" aria-label="Create business">+</a>`}</div><span class="sidebar-label">Personal</span><nav class="portal-nav">${portalLinks.map(([route,label])=>`<a class="portal-nav-link ${active===route?'active':''}" href="#portal/${route}"><span>${iconSvg[route]||iconSvg.communities}</span>${label}</a>`).join('')}</nav><div class="portal-sidebar-bottom"><a class="portal-nav-link ${active==='settings'?'active':''}" href="#portal/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main">${content}</main></div></div>`;
 }
-const businessRoutes=['business/home','business/analytics','business/products','business/product-new','business/payments','business/customers','business/access','business/websites','business/ads','business/workforce','business/affiliates','business/cards','business/support','business/more','business/developer','business/settings'];
-const bizSections=[['', [['home','Home'],['analytics','Analytics'],['products','Products'],['payments','Payments'],['customers','Customers'],['access','Access'],['websites','Websites']]],['Grow',[['ads','Ads'],['workforce','Workforce'],['affiliates','Affiliates']]],['Operations',[['cards','Cards'],['support','Support'],['more','More']]]];
-const bizLabel={home:'Home',analytics:'Analytics',products:'Products','product-new':'New product',payments:'Payments',customers:'Customers',access:'Access',websites:'Websites',ads:'Ads',workforce:'Workforce',affiliates:'Affiliates',cards:'Cards',support:'Support',more:'More',developer:'Developer',settings:'Settings'};
+const businessRoutes=['business/home','business/analytics','business/products','business/product-new','business/payments','business/customers','business/community','business/access','business/websites','business/ads','business/workforce','business/affiliates','business/cards','business/support','business/more','business/developer','business/settings'];
+const bizSections=[['', [['home','Home'],['analytics','Analytics'],['products','Products'],['payments','Payments'],['customers','Customers'],['community','Community'],['access','Access'],['websites','Websites']]],['Grow',[['ads','Ads'],['workforce','Workforce'],['affiliates','Affiliates']]],['Operations',[['cards','Cards'],['support','Support'],['more','More']]]];
+const bizLabel={home:'Home',analytics:'Analytics',products:'Products','product-new':'New product',payments:'Payments',customers:'Customers',community:'Community',access:'Access',websites:'Websites',ads:'Ads',workforce:'Workforce',affiliates:'Affiliates',cards:'Cards',support:'Support',more:'More',developer:'Developer',settings:'Settings'};
 function getBusiness(){return workspace.business;}
 function businessShell(content,active,business){
  const name=business.name||'Your business';
@@ -88,6 +89,7 @@ function businessPage(route,b,id){
  if(route==='analytics') return businessAnalytics(b);
  if(route==='payments') return businessPayments(workspace.orders);
  if(route==='customers') return businessCustomers(b, activeCustomerTab);
+ if(route==='community') return businessCommunity(b,id);
  if(route==='access') return businessAccess(b);
  if(route==='websites') return `${businessHeading('STOREFRONT','Websites','Manage the link customers use to find your Cohort business.')}<section class="portal-panel business-form"><h2>${b.website?'Storefront link':'Add a website'}</h2><p class="settings-row-note">Add your website or public storefront URL. This saves the link only; it does not publish a website.</p><form id="business-website-form"><label class="form-field"><span>Website URL</span><input name="website_url" type="url" value="${escapeHTML(b.website||'')}" placeholder="https://your-site.in"></label><button class="button button-primary" type="submit">Save website link</button><p class="auth-message" id="auth-message" role="status"></p></form></section><section class="portal-panel website-preview"><b>Cohort storefront</b><p>${escapeHTML(b.name)} | ${escapeHTML(b.handle||'your-page')}</p><span>Product catalog and public checkout will be enabled in a later phase.</span></section>`;
  if(route==='ads') return `${businessHeading('GROW','Ads','Promote products when your storefront is ready.')}<section class="portal-panel feature-placeholder"><span class="feature-letter">A</span><h2>Campaigns are coming soon</h2><p>Campaign setup will connect after products, checkout and audience targeting are ready.</p><button class="portal-action" data-business-notice="Promotions are not connected yet.">Create a campaign</button></section>`;
@@ -104,9 +106,10 @@ Authorization: Bearer YOUR_API_KEY</code></pre></section>`;
 function renderBusinessPage(route){
  const business=getBusiness();
  if(!business){location.hash=currentUser?'create-business':'login';return;}
- const parts=route.split('/'),section=parts[1]||'home',id=section==='product-edit'?parts.slice(2).join('/'):'';
+ const parts=route.split('/'),section=parts[1]||'home',id=['product-edit','community'].includes(section)?parts.slice(2).join('/') : '';
  const page=businessPage(section,business,id);
  app.innerHTML=businessShell(page,section==='product-edit'?'products':section,business);
+ if(section==='community'&&id) void loadCommunityFeed(supabase,id);
  document.body.classList.toggle('portal-mode',true);
  document.body.classList.toggle('portal-light',localStorage.getItem('cohort-portal-theme')==='light');
  const period=document.querySelector('#analytics-period');
@@ -126,6 +129,12 @@ function renderBusinessPage(route){
 function portalPage(route='profile') {
  if(!supabase||!currentUser) return `<div class="container page"><div class="empty-state"><b>${supabase?'Log in to open your portal.':'Connecting your account...'}</b>${initError?escapeHTML(initError):''}<a class="button button-dark" href="#login">Log in &rarr;</a></div></div>`;
  if(route==='onboarding')return portalShell(creatorOnboarding({profile:workspace.profile,business:getBusiness()}),'home');
+ if(route==='communities')return portalShell(memberCommunities(workspace.memberships),'communities');
+ if(route.startsWith('community/')){
+  const productId=route.slice('community/'.length),membership=workspace.memberships.find(item=>item.product_id===productId);
+  const content=memberCommunity(membership);
+  return portalShell(content,'communities');
+ }
  return portalShell(portalSubpage(route,{user:currentUser,name:displayName(),activeTab:activeProfileTab,escapeHTML,initialsFor,editProfileButton:'<button class="portal-action" data-edit-profile>Edit profile</button>'}),route);
 }
 function portalToast(message) {
@@ -146,15 +155,16 @@ function renderAuthRoute() {
   const rawRoute = decodeURIComponent(location.hash.slice(1) || 'home');
   const route = rawRoute === 'portal' ? 'portal/profile' : rawRoute;
   const portalRoutes=['portal/profile','portal/home','portal/orders','portal/library','portal/messages','portal/partners','portal/affiliates','portal/workforce','portal/communities','portal/settings','portal/create-business','portal/onboarding','portal/resolution','portal/help','portal/language','portal/legal'];
+  const isMemberCommunity=route.startsWith('portal/community/');
   const isBusinessRoute=route.startsWith('business/');
-  document.body.classList.toggle('portal-mode',portalRoutes.includes(route)||isBusinessRoute);
-  document.body.classList.toggle('portal-light',(portalRoutes.includes(route)||isBusinessRoute)&&localStorage.getItem('cohort-portal-theme')==='light');
+  document.body.classList.toggle('portal-mode',portalRoutes.includes(route)||isMemberCommunity||isBusinessRoute);
+  document.body.classList.toggle('portal-light',(portalRoutes.includes(route)||isMemberCommunity||isBusinessRoute)&&localStorage.getItem('cohort-portal-theme')==='light');
   if(route==='home'){document.body.classList.remove('portal-mode','portal-light');updateNav();return;}
   if(isBusinessRoute){renderBusinessPage(route);updateNav();return;}
   if(route==='signup-creator'&&currentUser){localStorage.setItem(`cohort-creator-intent:${currentUser.id}`,'1');location.hash='portal/onboarding';return;}
   if(route==='portal/create-business'&&getBusiness()){location.hash='business/home';return;}
   if(route==='signup'||route==='signup-creator'||route==='login') { if(route==='signup-creator')localStorage.setItem('cohort-creator-intent-pending','1'); app.innerHTML=authPage(route); }
-  if(portalRoutes.includes(route)) app.innerHTML=portalPage(route.split('/')[1]);
+  if(portalRoutes.includes(route)||isMemberCommunity){app.innerHTML=portalPage(isMemberCommunity?route.slice('portal/'.length):route.split('/')[1]);if(isMemberCommunity)void loadCommunityFeed(supabase,route.slice('portal/community/'.length));}
   if(route==='forgot-password') app.innerHTML=`<div class="container page"><div class="form-shell"><span class="eyebrow">Account recovery</span><h1>Reset your password.</h1><p>We will email you a secure link to choose a new password.</p><form id="reset-request-form"><label class="form-field"><span>Email address</span><input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><button class="button button-dark" type="submit">Send reset link &rarr;</button></form><p class="auth-message" id="auth-message" role="status"></p><div class="form-foot"><a href="#login">Back to log in</a></div></div></div>`;
   if(route==='reset-password') app.innerHTML=`<div class="container page"><div class="form-shell"><span class="eyebrow">Account recovery</span><h1>Choose a new password.</h1><form id="new-password-form"><label class="form-field"><span>New password</span><input name="password" type="password" minlength="8" autocomplete="new-password" required></label><button class="button button-dark" type="submit">Update password &rarr;</button></form><p class="auth-message" id="auth-message" role="status"></p></div></div>`;
   updateNav();
@@ -175,7 +185,8 @@ function setProductSaveState(form, message, state='loading') {
 document.addEventListener('submit', async event => {
   const form = event.target;
   if (!(form instanceof HTMLFormElement)) return;
-  if (!['auth-form', 'edit-profile-form', 'business-form', 'portal-search-form', 'reset-request-form', 'new-password-form', 'business-product-form', 'access-code-form', 'redeem-access-code-form'].includes(form.id)) return;
+  const communityForm = form.matches('[data-community-post-form], [data-community-reply-form]');
+  if (!communityForm && !['auth-form', 'edit-profile-form', 'business-form', 'portal-search-form', 'reset-request-form', 'new-password-form', 'business-product-form', 'access-code-form', 'redeem-access-code-form'].includes(form.id)) return;
   event.preventDefault();
   if (!supabase) return status(initError || 'Supabase is not configured.', true);
   const data = new FormData(form);
@@ -268,6 +279,17 @@ document.addEventListener('submit', async event => {
       await loadWorkspaceData(supabase, currentUser);
       renderAuthRoute();
       portalToast('Access added to your library.');
+    } else if (communityForm) {
+      const body=String(data.get('body')||'').trim(),productId=form.dataset.productId;
+      if(!body)throw new Error('Write something before you post.');
+      if(button)button.textContent=form.matches('[data-community-post-form]')?'Publishing…':'Replying…';
+      const row=form.matches('[data-community-post-form]')
+        ? {product_id:productId,author_id:currentUser.id,body}
+        : {post_id:form.dataset.postId,author_id:currentUser.id,body};
+      const {error}=await supabase.from(form.matches('[data-community-post-form]')?'community_posts':'community_comments').insert(row);
+      if(error)throw error;
+      await loadCommunityFeed(supabase,productId);
+      portalToast(form.matches('[data-community-post-form]')?'Update published.':'Reply added.');
     } else if (form.id === 'business-form') {
       const handle = String(data.get('handle') || '').trim().toLowerCase();
       const business = {
@@ -350,6 +372,23 @@ document.addEventListener('submit', async event => {
     if(form.id==='redeem-access-code-form')form.querySelector('[name="access_code"]')?.removeAttribute('disabled');
     form.dataset.saving='false';if (button) {button.disabled = false;if(originalButtonText!==undefined)button.textContent=originalButtonText;}
   }
+}, true);
+
+document.addEventListener('click', async event => {
+  const button=event.target.closest('[data-community-delete-post], [data-community-refresh]');
+  if(!button)return;
+  event.preventDefault();
+  if(button.matches('[data-community-refresh]')){button.disabled=true;try{await loadCommunityFeed(supabase,button.dataset.productId);}catch(error){portalToast(error?.message||'Could not refresh this community.');}finally{button.disabled=false;}return;}
+  if(!window.confirm('Delete this community post and its replies?'))return;
+  const postId=button.dataset.communityDeletePost;
+  const feed=button.closest('[data-community-feed]'),productId=feed?.dataset.productId;
+  button.disabled=true;
+  try{
+    const {error}=await supabase.from('community_posts').delete().eq('id',postId);
+    if(error)throw error;
+    await loadCommunityFeed(supabase,productId);
+    portalToast('Community post deleted.');
+  }catch(error){button.disabled=false;portalToast(error?.message||'Could not delete that post.');}
 }, true);
 
 document.addEventListener('click', async event => {

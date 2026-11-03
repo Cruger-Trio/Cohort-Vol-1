@@ -20870,7 +20870,7 @@ async function loadWorkspaceData(supabase2, user) {
       supabase2.from("profiles").select("*").eq("id", user.id).maybeSingle(),
       supabase2.from("businesses").select("*, products(*, prices(*), product_deliverables(*))").eq("owner_id", user.id).maybeSingle(),
       supabase2.from("orders").select("id,order_number,amount_paise,currency,status,created_at,paid_at,is_demo,products(name,slug),businesses(name,handle)").eq("buyer_id", user.id).order("created_at", { ascending: false }),
-      supabase2.from("entitlements").select("id,business_id,status,starts_at,ends_at,products(name,slug,type,product_deliverables(id,title,kind,storage_path,url)),businesses(name,handle)").eq("buyer_id", user.id).order("created_at", { ascending: false })
+      supabase2.from("entitlements").select("id,business_id,product_id,status,starts_at,ends_at,products(name,slug,type,headline,product_deliverables(id,title,kind,storage_path,url)),businesses(name,handle)").eq("buyer_id", user.id).order("created_at", { ascending: false })
     ]);
     if (businessError) throw businessError;
     if (purchasesError) throw purchasesError;
@@ -20916,8 +20916,8 @@ function businessHeading(kicker, title, copy = "", action = "") {
 function businessProducts(b) {
   const products = Array.isArray(b.products) ? b.products.filter((p) => p && typeof p === "object") : [];
   const rows = products.length ? `<div class="business-product-table-wrap"><table class="business-product-table"><thead><tr><th>Name</th><th>Price</th><th>Visibility</th><th>Discover status</th><th>Included apps</th><th>Checkout conversion</th><th>All time revenue</th><th>Active users</th><th></th></tr></thead><tbody>${products.map((p) => {
-    const price = (Array.isArray(p.pricingOptions) && p.pricingOptions.length ? p.pricingOptions[0].amount : p.price) || 0, cadence = (Array.isArray(p.pricingOptions) && p.pricingOptions.length ? p.pricingOptions[0].cadence : p.billing) || "once", archived = p.status === "archived", sales = workspace.orders.filter((order) => order.product_id === p.id && order.status === "paid"), total = sales.reduce((sum, order) => sum + moneyFromPaise(order.amount_paise), 0), active = new Set(workspace.entitlements.filter((entry) => entry.product_id === p.id && entry.status === "active").map((entry) => entry.buyer_id)).size;
-    return `<tr><td><a class="product-table-name" href="#business/product-edit/${encodeURIComponent(p.id)}"><span class="product-type-mark">${escapeHTML((p.type || "D")[0].toUpperCase())}</span><span><b>${escapeHTML(p.name || "Untitled product")}</b><small>${escapeHTML(p.type || "Digital product")}</small></span></a></td><td>&#8377;${Number(price).toLocaleString("en-IN")} ${cadence !== "once" ? `<small>/${escapeHTML(cadence)}</small>` : ""}</td><td><span class="product-status-pill ${p.status === "visible" && !archived ? "is-visible" : ""}">${archived ? "Archived" : p.status === "visible" ? "Visible" : "Draft"}</span></td><td>${p.listed && !archived ? "Listed" : "Not listed"}</td><td>${escapeHTML(p.type || "Digital product")}</td><td>Not tracked</td><td>&#8377;${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td>${active}</td><td><button class="portal-action product-row-menu" data-product-archive="${escapeHTML(p.id)}">${archived ? "Restore" : "Archive"}</button></td></tr>`;
+    const price = (Array.isArray(p.pricingOptions) && p.pricingOptions.length ? p.pricingOptions[0].amount : p.price) || 0, cadence = (Array.isArray(p.pricingOptions) && p.pricingOptions.length ? p.pricingOptions[0].cadence : p.billing) || "once", archived = p.status === "archived", sales = workspace.orders.filter((order) => order.product_id === p.id && order.status === "paid"), total = sales.reduce((sum, order) => sum + moneyFromPaise(order.amount_paise), 0), active2 = new Set(workspace.entitlements.filter((entry) => entry.product_id === p.id && entry.status === "active").map((entry) => entry.buyer_id)).size;
+    return `<tr><td><a class="product-table-name" href="#business/product-edit/${encodeURIComponent(p.id)}"><span class="product-type-mark">${escapeHTML((p.type || "D")[0].toUpperCase())}</span><span><b>${escapeHTML(p.name || "Untitled product")}</b><small>${escapeHTML(p.type || "Digital product")}</small></span></a></td><td>&#8377;${Number(price).toLocaleString("en-IN")} ${cadence !== "once" ? `<small>/${escapeHTML(cadence)}</small>` : ""}</td><td><span class="product-status-pill ${p.status === "visible" && !archived ? "is-visible" : ""}">${archived ? "Archived" : p.status === "visible" ? "Visible" : "Draft"}</span></td><td>${p.listed && !archived ? "Listed" : "Not listed"}</td><td>${escapeHTML(p.type || "Digital product")}</td><td>Not tracked</td><td>&#8377;${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td>${active2}</td><td><button class="portal-action product-row-menu" data-product-archive="${escapeHTML(p.id)}">${archived ? "Restore" : "Archive"}</button></td></tr>`;
   }).join("")}</tbody></table></div>` : `<section class="portal-panel product-empty"><div class="empty-rocket">&#9632;</div><h3>No products yet</h3><p>A product organizes access to your digital offer, membership or community.</p><a class="button button-primary" href="#business/product-new">Create product</a></section>`;
   return `${businessHeading("SELL ON COHORT", "Products", "Manage digital products, memberships and community plans.", '<a class="button button-primary" href="#business/product-new">+ Create product</a>')}<div class="product-toolbar"><label class="product-search"><span>&#9906;</span><input id="product-search" placeholder="Search by product name" aria-label="Search products"></label><select id="product-visibility-filter" aria-label="Filter visibility"><option value="all">Visibility: All</option><option value="visible">Visibility: Visible</option><option value="draft">Visibility: Draft</option><option value="archived">Visibility: Archived</option></select><span class="toolbar-spacer"></span><button class="portal-action" data-product-export>Export</button><button class="portal-action" data-product-settings>Settings</button></div><div id="product-list-content">${rows}</div><p class="draft-note product-data-note">Sales totals use recorded paid orders. Conversion and storefront analytics are not tracked yet.</p>`;
 }
@@ -21118,15 +21118,15 @@ function portalSubpage(route, context) {
     const items = workspace.memberships || [];
     const cards = items.length ? `<div class="library-list">${items.map((item) => {
       const product = item.products || {}, files = product.product_deliverables || [];
-      const active = item.status === "active" && (!item.ends_at || new Date(item.ends_at) > /* @__PURE__ */ new Date());
+      const active2 = item.status === "active" && (!item.ends_at || new Date(item.ends_at) > /* @__PURE__ */ new Date());
       const resources = files.length ? files.map((file) => {
         const isFile = file.kind === "file" && file.storage_path;
         const external = typeof file.url === "string" && /^https?:\/\//i.test(file.url);
         const kindLabel = isFile ? "Private download" : file.kind === "link" ? "Hosted content or tool" : file.kind || "Resource";
-        const action = isFile ? `<button class="portal-action" type="button" data-customer-download="${escapeHTML7(file.storage_path)}" data-download-name="${escapeHTML7(file.title || "cohort-download")}" ${active ? "" : "disabled"}>Download</button>` : external && active ? `<a class="portal-action" href="${escapeHTML7(file.url)}" target="_blank" rel="noopener noreferrer">Open resource</a>` : external ? `<span class="portal-action is-disabled" aria-disabled="true">Access ended</span>` : "";
+        const action = isFile ? `<button class="portal-action" type="button" data-customer-download="${escapeHTML7(file.storage_path)}" data-download-name="${escapeHTML7(file.title || "cohort-download")}" ${active2 ? "" : "disabled"}>Download</button>` : external && active2 ? `<a class="portal-action" href="${escapeHTML7(file.url)}" target="_blank" rel="noopener noreferrer">Open resource</a>` : external ? `<span class="portal-action is-disabled" aria-disabled="true">Access ended</span>` : "";
         return `<div class="library-resource"><span class="library-resource-icon" aria-hidden="true">${isFile ? "?" : "?"}</span><span><b>${escapeHTML7(file.title || "Included resource")}</b><small>${kindLabel}</small></span>${action || (!external && !isFile ? `<p class="library-resource-note">${escapeHTML7(file.url || "")}</p>` : "")}</div>`;
       }).join("") : `<div class="portal-empty-state library-empty"><b>No materials added yet</b><p>The creator will add files, hosted content, or tool access here.</p></div>`;
-      return `<article class="portal-panel library-item"><div class="library-item-head"><div><span class="portal-kicker">${escapeHTML7(product.type || "PRODUCT")}</span><h2>${escapeHTML7(product.name || "Cohort product")}</h2><p>By ${escapeHTML7(item.businesses?.name || "Cohort creator")} ? ${escapeHTML7(item.status || "Access")}</p></div><span class="customer-status-pill ${active ? "is-active" : ""}">${active ? "Access active" : "Access ended"}</span></div>${item.ends_at ? `<small class="library-expiry">Access until ${escapeHTML7(new Date(item.ends_at).toLocaleDateString("en-IN"))}</small>` : ""}<div class="library-resources">${resources}</div><a class="text-link" href="/p/${encodeURIComponent(item.businesses?.handle || "")}/${encodeURIComponent(product.slug || "")}">View product page ?</a></article>`;
+      return `<article class="portal-panel library-item"><div class="library-item-head"><div><span class="portal-kicker">${escapeHTML7(product.type || "PRODUCT")}</span><h2>${escapeHTML7(product.name || "Cohort product")}</h2><p>By ${escapeHTML7(item.businesses?.name || "Cohort creator")} ? ${escapeHTML7(item.status || "Access")}</p></div><span class="customer-status-pill ${active2 ? "is-active" : ""}">${active2 ? "Access active" : "Access ended"}</span></div>${item.ends_at ? `<small class="library-expiry">Access until ${escapeHTML7(new Date(item.ends_at).toLocaleDateString("en-IN"))}</small>` : ""}<div class="library-resources">${resources}</div><a class="text-link" href="/p/${encodeURIComponent(item.businesses?.handle || "")}/${encodeURIComponent(product.slug || "")}">View product page ?</a></article>`;
     }).join("")}</div>` : `<section class="portal-panel"><div class="portal-empty-state"><span>?</span><b>Your library is ready when you are</b><p>Use a creator invite code to unlock a beta offer or get direct access to a product.</p><a class="button button-primary" href="#explore">Explore Cohort ?</a></div></section>`;
     return `<div class="portal-page-heading"><span class="portal-kicker">YOUR PURCHASES</span><h1>My library</h1><p>One home for creator resources, courses, memberships, and connected tools you can access.</p></div><section class="portal-panel redeem-access-panel"><div class="redeem-access-copy"><span class="redeem-access-icon" aria-hidden="true">?</span><div><h2>Have an access code?</h2><p>Redeem a private creator invite to add the offer to your library.</p></div></div><form id="redeem-access-code-form"><label class="sr-only" for="redeem-access-code">Access code</label><input id="redeem-access-code" name="access_code" placeholder="Enter your Cohort code" autocomplete="off" autocapitalize="characters" minlength="12" maxlength="64" required><button class="button button-primary" type="submit">Redeem code</button></form><p class="auth-message" id="redeem-access-status" role="status"></p></section>${cards}`;
   }
@@ -21179,6 +21179,61 @@ function creatorOnboarding({ profile, business }) {
     const locked = index === 1 && !profileReady || index === 2 && (!profileReady || !businessReady);
     return `<article class="onboarding-step ${step.done ? "is-done" : ""}"><span class="onboarding-step-number">${step.done ? "\u2713" : index + 1}</span><div><h2>${esc(step.title)}</h2><p>${esc(step.description)}</p>${step.action ? `<button class="button button-primary" data-edit-profile>${esc(step.label)} \u2192</button>` : locked ? `<button class="button portal-action" type="button" disabled>${esc(step.label)}</button>` : `<a class="button ${step.done ? "portal-action" : "button-primary"}" href="${esc(step.href)}">${esc(step.label)}${step.done ? "" : " \u2192"}</a>`}</div></article>`;
   }).join("")}</section>${complete ? `<section class="onboarding-share"><b>Your public product link</b><a href="${esc(productPath)}">${location.origin}${esc(productPath)}</a><button class="portal-action" type="button" data-copy-link="${esc(productPath)}">Copy link</button></section>` : ""}<footer><a href="#portal/profile">Go to personal portal</a>${business ? `<a href="#business/home">Open business workspace \u2192</a>` : ""}</footer></div>`;
+}
+
+// src/portal/community.js
+var esc2 = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+var active = (item) => item?.status === "active" && (!item.starts_at || new Date(item.starts_at) <= /* @__PURE__ */ new Date()) && (!item.ends_at || new Date(item.ends_at) > /* @__PURE__ */ new Date());
+var initials = (name) => String(name || "C").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+var displayName = (profile, fallback = "Cohort member") => profile?.full_name || (profile?.username ? `@${profile.username}` : fallback);
+var productSpaces = (business) => (business?.products || []).filter((product) => ["Community", "Membership"].includes(product.type));
+function businessCommunity(business, productId = "") {
+  const spaces = productSpaces(business);
+  const selected = spaces.find((product) => product.id === productId);
+  if (productId && selected) {
+    return `<div class="portal-page-heading"><div><span class="portal-kicker">MEMBER SPACE</span><h1>${esc2(selected.name)}</h1><p>${esc2(selected.description || "Share updates and keep your members close.")}</p></div><a class="portal-action" href="#business/community">All spaces</a></div>
+      <section class="portal-panel community-composer"><div class="community-composer-head"><span class="community-avatar">${esc2(initials(business.name))}</span><span><b>Post an update</b><small>Your active members will see this in their Cohort community.</small></span></div><form data-community-post-form data-product-id="${esc2(selected.id)}"><label class="sr-only" for="community-post-body">Your update</label><textarea id="community-post-body" name="body" maxlength="4000" rows="4" placeholder="Share a lesson, announcement, prompt, or useful link\u2026" required></textarea><div class="community-form-footer"><span>Plain text \xB7 up to 4,000 characters</span><button class="button button-primary" type="submit">Publish update</button></div><p class="auth-message" data-community-status role="status"></p></form></section>
+      <section class="community-feed-section"><div class="community-feed-heading"><div><h2>Member conversation</h2><p>Posts and replies from this space.</p></div><button class="portal-action" data-community-refresh type="button" data-product-id="${esc2(selected.id)}">Refresh</button></div><div class="community-feed" data-community-feed data-product-id="${esc2(selected.id)}" data-owner="true" data-viewer-name="${esc2(business.name)}"><div class="community-feed-loading"><i class="cohort-spinner" aria-hidden="true"></i> Loading the conversation\u2026</div></div></section>`;
+  }
+  const cards = spaces.map((product) => {
+    const members = (business.entitlements || []).filter((item) => item.product_id === product.id && active(item)).length;
+    return `<a class="community-space-card" href="#business/community/${encodeURIComponent(product.id)}"><span class="community-space-icon">\u2733</span><span class="community-space-main"><b>${esc2(product.name)}</b><small>${esc2(product.type)} \xB7 ${members} active ${members === 1 ? "member" : "members"}</small></span><span class="community-space-arrow" aria-hidden="true">\u2192</span></a>`;
+  }).join("");
+  return `<div class="portal-page-heading"><div><span class="portal-kicker">AUDIENCE</span><h1>Community</h1><p>Bring your member updates and conversations into Cohort.</p></div><a class="button button-primary" href="#business/product-new">Create a membership</a></div>
+    ${spaces.length ? `<section class="community-space-list">${cards}</section>` : `<section class="portal-panel"><div class="portal-empty-state"><span>\u2733</span><b>Start with a member space</b><p>Create a Community or Membership product. Its active members can then read your updates and reply from their own Cohort portal.</p><a class="button button-primary" href="#business/product-new">Create a member product</a></div></section>`}`;
+}
+function memberCommunity(membership) {
+  const product = membership?.products || {};
+  if (!membership || !active(membership)) return `<div class="portal-page-heading"><span class="portal-kicker">MEMBER SPACE</span><h1>Access ended</h1><p>This community is no longer available to your account.</p></div><a class="text-link" href="#portal/communities">Back to my communities \u2192</a>`;
+  return `<div class="portal-page-heading"><div><span class="portal-kicker">${esc2(membership.businesses?.name || "COHORT COMMUNITY")}</span><h1>${esc2(product.name || "Member space")}</h1><p>${esc2(product.headline || product.type || "Updates and conversation with your creator.")}</p></div><a class="portal-action" href="#portal/communities">All communities</a></div>
+    <section class="portal-panel community-composer member-reply-intro"><b>Welcome to the conversation</b><p>Read creator updates, ask a thoughtful question, or share what you\u2019re learning.</p></section>
+    <section class="community-feed-section"><div class="community-feed-heading"><div><h2>Latest updates</h2><p>From ${esc2(membership.businesses?.name || "your creator")} and the members in this space.</p></div><button class="portal-action" data-community-refresh type="button" data-product-id="${esc2(membership.product_id)}">Refresh</button></div><div class="community-feed" data-community-feed data-product-id="${esc2(membership.product_id)}" data-owner="false" data-viewer-name="${esc2(displayName(membership._viewerProfile))}"><div class="community-feed-loading"><i class="cohort-spinner" aria-hidden="true"></i> Loading the conversation\u2026</div></div></section>`;
+}
+function memberCommunities(memberships = []) {
+  const items = memberships.filter((item) => ["Community", "Membership"].includes(item.products?.type) && active(item));
+  const cards = items.map((item) => `<a class="community-space-card" href="#portal/community/${encodeURIComponent(item.product_id)}"><span class="community-space-icon">\u2733</span><span class="community-space-main"><b>${esc2(item.products?.name || "Member space")}</b><small>${esc2(item.businesses?.name || "Cohort creator")} \xB7 ${item.ends_at ? `Access until ${esc2(new Date(item.ends_at).toLocaleDateString("en-IN"))}` : "Active membership"}</small></span><span class="community-space-arrow" aria-hidden="true">\u2192</span></a>`).join("");
+  return `<div class="portal-page-heading"><span class="portal-kicker">YOUR MEMBERSHIPS</span><h1>Communities</h1><p>Your creator spaces, conversations and member updates.</p></div>${cards ? `<div class="community-space-list">${cards}</div>` : `<section class="portal-panel"><div class="portal-empty-state"><span>\u2733</span><b>No active community spaces</b><p>When you join a creator\u2019s Community or Membership offer, its updates and discussions will show up here.</p><a class="button button-primary" href="#communities">Explore Cohort \u2192</a></div></section>`}`;
+}
+async function loadCommunityFeed(supabase2, productId) {
+  const feed = [...document.querySelectorAll("[data-community-feed]")].find((node) => node.dataset.productId === productId);
+  if (!feed) return;
+  const { data: posts, error } = await supabase2.from("community_posts").select("id,product_id,author_id,author_name,body,pinned,created_at,community_comments(id,author_id,author_name,body,created_at)").eq("product_id", productId).order("pinned", { ascending: false }).order("created_at", { ascending: false });
+  if (error) {
+    feed.innerHTML = `<div class="community-feed-empty"><b>Could not load this conversation</b><p>${esc2(error.message)}</p></div>`;
+    return;
+  }
+  if (!posts?.length) {
+    feed.innerHTML = `<div class="community-feed-empty"><span>\u2733</span><b>${feed.dataset.owner === "true" ? "Your space is ready" : "A quiet start"}</b><p>${feed.dataset.owner === "true" ? "Post your first update to welcome members and start a conversation." : "The creator has not posted an update here yet. Check back soon."}</p></div>`;
+    return;
+  }
+  feed.innerHTML = posts.map((post2) => {
+    const author = post2.author_name || "Cohort creator";
+    const comments = (post2.community_comments || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    return `<article class="community-post"><header class="community-post-head"><span class="community-avatar">${esc2(initials(author))}</span><span class="community-post-author"><b>${esc2(author)}</b><small>${new Date(post2.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}${post2.pinned ? " \xB7 Pinned" : ""}</small></span>${feed.dataset.owner === "true" ? `<button class="community-delete" type="button" data-community-delete-post="${esc2(post2.id)}" aria-label="Delete post">Delete</button>` : ""}</header><div class="community-post-body">${esc2(post2.body).replace(/\r?\n/g, "<br>")}</div><div class="community-replies">${comments.map((comment) => {
+      const replyName = comment.author_name || "Cohort member";
+      return `<div class="community-reply"><span class="community-avatar community-avatar-small">${esc2(initials(replyName))}</span><div><div class="community-reply-meta"><b>${esc2(replyName)}</b><small>${new Date(comment.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</small></div><p>${esc2(comment.body).replace(/\r?\n/g, "<br>")}</p></div></div>`;
+    }).join("")}</div><form class="community-reply-form" data-community-reply-form data-post-id="${esc2(post2.id)}" data-product-id="${esc2(productId)}"><label class="sr-only" for="reply-${esc2(post2.id)}">Reply to ${esc2(author)}</label><input id="reply-${esc2(post2.id)}" name="body" maxlength="2000" placeholder="Write a helpful reply\u2026" required><button class="portal-action" type="submit">Reply</button></form></article>`;
+  }).join("");
 }
 
 // src/portal/index.js
@@ -21240,23 +21295,23 @@ var activeCustomerTab = "Customers";
 var iconSvg = { home: '<svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>', messages: '<svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 4a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg>', partners: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm7-7.8a4 4 0 0 1 0 7.6M20 21v-2a4 4 0 0 0-3-3.9"/></svg>', affiliates: '<svg viewBox="0 0 24 24"><circle cx="6" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><circle cx="6" cy="19" r="3"/><path d="m8.7 6.5 6.6 11m0-11L8.7 17.5"/></svg>', workforce: '<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18m-11 0v2h4v-2"/></svg>', communities: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>', settings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.7 1.7 0 0 0-1.9.3l-.1.1h-3.4l-.1-.2a1.7 1.7 0 0 0-1.6-1.1 1.7 1.7 0 0 0-.9.3l-.2.1L6.8 17l.1-.2a1.7 1.7 0 0 0-.3-1.9l-.1-.1v-3.4l.2-.1a1.7 1.7 0 0 0 1.1-1.6 1.7 1.7 0 0 0-.3-.9l-.1-.2 1.7-2.9.2.1a1.7 1.7 0 0 0 1.9-.3l.1-.1h3.4l.1.2a1.7 1.7 0 0 0 1.6 1.1 1.7 1.7 0 0 0 .9-.3l.2-.1 2.9 1.7-.1.2a1.7 1.7 0 0 0 .3 1.9l.1.1v3.4z"/></svg>' };
 var portalLinks = [["home", "Home"], ["orders", "Orders"], ["library", "My library"], ["messages", "Messages"], ["partners", "Partners"], ["affiliates", "Affiliates"], ["workforce", "Workforce"], ["communities", "Communities"]];
 var businessIcons = { home: iconSvg.home, analytics: '<svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 3 6-7"/></svg>', products: '<svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5zm-9 5v9l9 5 9-5V8M12 13v9"/></svg>', payments: '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg>', customers: iconSvg.partners, access: '<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9m-4 0h4v4M11 15h6"/></svg>', websites: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>', ads: '<svg viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 13v-2zm0 2-1 5h5l2-4m5-5 2-5"/></svg>', workforce: iconSvg.workforce, affiliates: iconSvg.affiliates, cards: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18m-14 6h4"/></svg>', support: iconSvg.messages, more: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>' };
-function displayName() {
+function displayName2() {
   return workspace.profile?.full_name || currentUser?.user_metadata?.full_name || currentUser?.email?.split("@")[0] || "Creator";
 }
 function initialsFor2(value) {
   return String(value || "G").trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join("").toUpperCase();
 }
-function portalShell(content, active = "profile") {
-  const name = displayName(), business = getBusiness();
-  return `<div class="portal-app"><header class="portal-topbar"><a class="portal-brand" href="#portal/profile"><span class="brand-mark">C</span> Cohort</a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search Cohort" aria-label="Search Cohort"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><button class="portal-icon-button" data-notifications aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button><button class="portal-account-button" data-menu-toggle aria-expanded="false"><span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span><span class="account-name">${escapeHTML6(name)}</span><span aria-hidden="true">v</span></button><div class="portal-account-menu" id="portal-account-menu" hidden><div class="account-menu-head"><span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span><span><b>${escapeHTML6(name)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><a href="#portal/profile">View profile</a><a href="#portal/resolution">Resolution center</a><a href="#portal/orders">Orders</a><a href="#portal/library">My library</a><a href="#portal/settings">Settings</a><a href="#portal/help">Help and support</a><a href="#portal/language">Language</a><a href="#portal/legal">Legal</a><button data-signout>Sign out</button><div class="theme-picks"><button data-theme="dark">Dark</button><button data-theme="light">Light</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar"><div class="portal-workspace-switch"><button class="workspace-selected">${escapeHTML6(initialsFor2(name))}</button>${business ? `<a class="workspace-business" href="#business/home" title="Open ${escapeHTML6(business.name)}">${escapeHTML6(initialsFor2(business.name))}</a>` : ""}${business ? `<button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add business">+</button>` : `<a href="#portal/create-business" aria-label="Create business">+</a>`}</div><span class="sidebar-label">Personal</span><nav class="portal-nav">${portalLinks.map(([route, label]) => `<a class="portal-nav-link ${active === route ? "active" : ""}" href="#portal/${route}"><span>${iconSvg[route] || iconSvg.communities}</span>${label}</a>`).join("")}</nav><div class="portal-sidebar-bottom"><a class="portal-nav-link ${active === "settings" ? "active" : ""}" href="#portal/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main">${content}</main></div></div>`;
+function portalShell(content, active2 = "profile") {
+  const name = displayName2(), business = getBusiness();
+  return `<div class="portal-app"><header class="portal-topbar"><a class="portal-brand" href="#portal/profile"><span class="brand-mark">C</span> Cohort</a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search Cohort" aria-label="Search Cohort"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><button class="portal-icon-button" data-notifications aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button><button class="portal-account-button" data-menu-toggle aria-expanded="false"><span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span><span class="account-name">${escapeHTML6(name)}</span><span aria-hidden="true">v</span></button><div class="portal-account-menu" id="portal-account-menu" hidden><div class="account-menu-head"><span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span><span><b>${escapeHTML6(name)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><a href="#portal/profile">View profile</a><a href="#portal/resolution">Resolution center</a><a href="#portal/orders">Orders</a><a href="#portal/library">My library</a><a href="#portal/settings">Settings</a><a href="#portal/help">Help and support</a><a href="#portal/language">Language</a><a href="#portal/legal">Legal</a><button data-signout>Sign out</button><div class="theme-picks"><button data-theme="dark">Dark</button><button data-theme="light">Light</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar"><div class="portal-workspace-switch"><button class="workspace-selected">${escapeHTML6(initialsFor2(name))}</button>${business ? `<a class="workspace-business" href="#business/home" title="Open ${escapeHTML6(business.name)}">${escapeHTML6(initialsFor2(business.name))}</a>` : ""}${business ? `<button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add business">+</button>` : `<a href="#portal/create-business" aria-label="Create business">+</a>`}</div><span class="sidebar-label">Personal</span><nav class="portal-nav">${portalLinks.map(([route, label]) => `<a class="portal-nav-link ${active2 === route ? "active" : ""}" href="#portal/${route}"><span>${iconSvg[route] || iconSvg.communities}</span>${label}</a>`).join("")}</nav><div class="portal-sidebar-bottom"><a class="portal-nav-link ${active2 === "settings" ? "active" : ""}" href="#portal/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main">${content}</main></div></div>`;
 }
-var bizSections = [["", [["home", "Home"], ["analytics", "Analytics"], ["products", "Products"], ["payments", "Payments"], ["customers", "Customers"], ["access", "Access"], ["websites", "Websites"]]], ["Grow", [["ads", "Ads"], ["workforce", "Workforce"], ["affiliates", "Affiliates"]]], ["Operations", [["cards", "Cards"], ["support", "Support"], ["more", "More"]]]];
+var bizSections = [["", [["home", "Home"], ["analytics", "Analytics"], ["products", "Products"], ["payments", "Payments"], ["customers", "Customers"], ["community", "Community"], ["access", "Access"], ["websites", "Websites"]]], ["Grow", [["ads", "Ads"], ["workforce", "Workforce"], ["affiliates", "Affiliates"]]], ["Operations", [["cards", "Cards"], ["support", "Support"], ["more", "More"]]]];
 function getBusiness() {
   return workspace.business;
 }
-function businessShell(content, active, business) {
+function businessShell(content, active2, business) {
   const name = business.name || "Your business";
-  return `<div class="portal-app business-app"><header class="portal-topbar"><a class="portal-brand" href="#business/home"><span class="brand-mark">C</span> Cohort</a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search ${escapeHTML6(name)}" aria-label="Search business"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><button class="portal-icon-button" data-notifications aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button><button class="portal-account-button" data-menu-toggle aria-expanded="false"><span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span><span class="account-name">${escapeHTML6(displayName())}</span><span>v</span></button><div class="portal-account-menu" id="portal-account-menu" hidden><div class="account-menu-head"><span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span><span><b>${escapeHTML6(name)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><a href="#portal/profile">Personal portal</a><a href="#business/settings">Business settings</a><a href="#portal/help">Help and support</a><button data-signout>Sign out</button><div class="theme-picks"><button data-theme="dark">Dark</button><button data-theme="light">Light</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar business-sidebar"><div class="business-switcher"><a class="workspace-personal" href="#portal/profile" title="Personal portal">${escapeHTML6(initialsFor2(displayName()))}</a><button class="workspace-selected business-switch-button" title="Current business">${escapeHTML6(initialsFor2(name))}</button><button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add another business">+</button></div><div class="business-side-title">${escapeHTML6(name)}<span>${escapeHTML6(business.status === "setup" ? "Setup" : "Business")}</span></div><nav class="business-nav">${bizSections.map(([group, items]) => `${group ? `<span class="biz-section-label">${group}</span>` : ""}${items.map(([key, label]) => `<a class="portal-nav-link ${active === key ? "active" : ""}" href="#business/${key}"><span class="biz-icon">${businessIcons[key] || iconSvg.communities}</span>${label}${key === "workforce" ? '<small class="biz-badge">Beta</small>' : ""}</a>`).join("")}`).join("")}<div class="business-more-links" id="business-more-links" hidden><a href="#business/developer">Developer</a><a href="#business/settings">Settings</a></div></nav><div class="business-side-bottom"><a class="portal-nav-link ${active === "developer" ? "active" : ""}" href="#business/developer"><span class="biz-icon">${businessIcons.more}</span>Developer</a><a class="portal-nav-link ${active === "settings" ? "active" : ""}" href="#business/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main business-main">${content}</main></div></div>`;
+  return `<div class="portal-app business-app"><header class="portal-topbar"><a class="portal-brand" href="#business/home"><span class="brand-mark">C</span> Cohort</a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search ${escapeHTML6(name)}" aria-label="Search business"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><button class="portal-icon-button" data-notifications aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button><button class="portal-account-button" data-menu-toggle aria-expanded="false"><span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span><span class="account-name">${escapeHTML6(displayName2())}</span><span>v</span></button><div class="portal-account-menu" id="portal-account-menu" hidden><div class="account-menu-head"><span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span><span><b>${escapeHTML6(name)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><a href="#portal/profile">Personal portal</a><a href="#business/settings">Business settings</a><a href="#portal/help">Help and support</a><button data-signout>Sign out</button><div class="theme-picks"><button data-theme="dark">Dark</button><button data-theme="light">Light</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar business-sidebar"><div class="business-switcher"><a class="workspace-personal" href="#portal/profile" title="Personal portal">${escapeHTML6(initialsFor2(displayName2()))}</a><button class="workspace-selected business-switch-button" title="Current business">${escapeHTML6(initialsFor2(name))}</button><button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add another business">+</button></div><div class="business-side-title">${escapeHTML6(name)}<span>${escapeHTML6(business.status === "setup" ? "Setup" : "Business")}</span></div><nav class="business-nav">${bizSections.map(([group, items]) => `${group ? `<span class="biz-section-label">${group}</span>` : ""}${items.map(([key, label]) => `<a class="portal-nav-link ${active2 === key ? "active" : ""}" href="#business/${key}"><span class="biz-icon">${businessIcons[key] || iconSvg.communities}</span>${label}${key === "workforce" ? '<small class="biz-badge">Beta</small>' : ""}</a>`).join("")}`).join("")}<div class="business-more-links" id="business-more-links" hidden><a href="#business/developer">Developer</a><a href="#business/settings">Settings</a></div></nav><div class="business-side-bottom"><a class="portal-nav-link ${active2 === "developer" ? "active" : ""}" href="#business/developer"><span class="biz-icon">${businessIcons.more}</span>Developer</a><a class="portal-nav-link ${active2 === "settings" ? "active" : ""}" href="#business/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main business-main">${content}</main></div></div>`;
 }
 function businessHeading4(kicker, title, copy = "", action = "") {
   return `<div class="portal-page-heading business-heading"><div><span class="portal-kicker">${kicker}</span><h1>${title}</h1>${copy ? `<p>${copy}</p>` : ""}</div>${action}</div>`;
@@ -21269,6 +21324,7 @@ function businessPage(route, b, id) {
   if (route === "analytics") return businessAnalytics(b);
   if (route === "payments") return businessPayments(workspace.orders);
   if (route === "customers") return businessCustomers(b, activeCustomerTab);
+  if (route === "community") return businessCommunity(b, id);
   if (route === "access") return businessAccess(b);
   if (route === "websites") return `${businessHeading4("STOREFRONT", "Websites", "Manage the link customers use to find your Cohort business.")}<section class="portal-panel business-form"><h2>${b.website ? "Storefront link" : "Add a website"}</h2><p class="settings-row-note">Add your website or public storefront URL. This saves the link only; it does not publish a website.</p><form id="business-website-form"><label class="form-field"><span>Website URL</span><input name="website_url" type="url" value="${escapeHTML6(b.website || "")}" placeholder="https://your-site.in"></label><button class="button button-primary" type="submit">Save website link</button><p class="auth-message" id="auth-message" role="status"></p></form></section><section class="portal-panel website-preview"><b>Cohort storefront</b><p>${escapeHTML6(b.name)} | ${escapeHTML6(b.handle || "your-page")}</p><span>Product catalog and public checkout will be enabled in a later phase.</span></section>`;
   if (route === "ads") return `${businessHeading4("GROW", "Ads", "Promote products when your storefront is ready.")}<section class="portal-panel feature-placeholder"><span class="feature-letter">A</span><h2>Campaigns are coming soon</h2><p>Campaign setup will connect after products, checkout and audience targeting are ready.</p><button class="portal-action" data-business-notice="Promotions are not connected yet.">Create a campaign</button></section>`;
@@ -21288,9 +21344,10 @@ function renderBusinessPage(route) {
     location.hash = currentUser ? "create-business" : "login";
     return;
   }
-  const parts = route.split("/"), section = parts[1] || "home", id = section === "product-edit" ? parts.slice(2).join("/") : "";
+  const parts = route.split("/"), section = parts[1] || "home", id = ["product-edit", "community"].includes(section) ? parts.slice(2).join("/") : "";
   const page = businessPage(section, business, id);
   app.innerHTML = businessShell(page, section === "product-edit" ? "products" : section, business);
+  if (section === "community" && id) void loadCommunityFeed(supabase, id);
   document.body.classList.toggle("portal-mode", true);
   document.body.classList.toggle("portal-light", localStorage.getItem("cohort-portal-theme") === "light");
   const period = document.querySelector("#analytics-period");
@@ -21355,7 +21412,13 @@ function renderBusinessPage(route) {
 function portalPage(route = "profile") {
   if (!supabase || !currentUser) return `<div class="container page"><div class="empty-state"><b>${supabase ? "Log in to open your portal." : "Connecting your account..."}</b>${initError ? escapeHTML6(initError) : ""}<a class="button button-dark" href="#login">Log in &rarr;</a></div></div>`;
   if (route === "onboarding") return portalShell(creatorOnboarding({ profile: workspace.profile, business: getBusiness() }), "home");
-  return portalShell(portalSubpage(route, { user: currentUser, name: displayName(), activeTab: activeProfileTab, escapeHTML: escapeHTML6, initialsFor: initialsFor2, editProfileButton: '<button class="portal-action" data-edit-profile>Edit profile</button>' }), route);
+  if (route === "communities") return portalShell(memberCommunities(workspace.memberships), "communities");
+  if (route.startsWith("community/")) {
+    const productId = route.slice("community/".length), membership = workspace.memberships.find((item) => item.product_id === productId);
+    const content = memberCommunity(membership);
+    return portalShell(content, "communities");
+  }
+  return portalShell(portalSubpage(route, { user: currentUser, name: displayName2(), activeTab: activeProfileTab, escapeHTML: escapeHTML6, initialsFor: initialsFor2, editProfileButton: '<button class="portal-action" data-edit-profile>Edit profile</button>' }), route);
 }
 function portalToast(message) {
   let node = document.querySelector("#portal-toast");
@@ -21374,9 +21437,10 @@ function renderAuthRoute() {
   const rawRoute = decodeURIComponent(location.hash.slice(1) || "home");
   const route = rawRoute === "portal" ? "portal/profile" : rawRoute;
   const portalRoutes = ["portal/profile", "portal/home", "portal/orders", "portal/library", "portal/messages", "portal/partners", "portal/affiliates", "portal/workforce", "portal/communities", "portal/settings", "portal/create-business", "portal/onboarding", "portal/resolution", "portal/help", "portal/language", "portal/legal"];
+  const isMemberCommunity = route.startsWith("portal/community/");
   const isBusinessRoute = route.startsWith("business/");
-  document.body.classList.toggle("portal-mode", portalRoutes.includes(route) || isBusinessRoute);
-  document.body.classList.toggle("portal-light", (portalRoutes.includes(route) || isBusinessRoute) && localStorage.getItem("cohort-portal-theme") === "light");
+  document.body.classList.toggle("portal-mode", portalRoutes.includes(route) || isMemberCommunity || isBusinessRoute);
+  document.body.classList.toggle("portal-light", (portalRoutes.includes(route) || isMemberCommunity || isBusinessRoute) && localStorage.getItem("cohort-portal-theme") === "light");
   if (route === "home") {
     document.body.classList.remove("portal-mode", "portal-light");
     updateNav();
@@ -21400,7 +21464,10 @@ function renderAuthRoute() {
     if (route === "signup-creator") localStorage.setItem("cohort-creator-intent-pending", "1");
     app.innerHTML = authPage(route);
   }
-  if (portalRoutes.includes(route)) app.innerHTML = portalPage(route.split("/")[1]);
+  if (portalRoutes.includes(route) || isMemberCommunity) {
+    app.innerHTML = portalPage(isMemberCommunity ? route.slice("portal/".length) : route.split("/")[1]);
+    if (isMemberCommunity) void loadCommunityFeed(supabase, route.slice("portal/community/".length));
+  }
   if (route === "forgot-password") app.innerHTML = `<div class="container page"><div class="form-shell"><span class="eyebrow">Account recovery</span><h1>Reset your password.</h1><p>We will email you a secure link to choose a new password.</p><form id="reset-request-form"><label class="form-field"><span>Email address</span><input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><button class="button button-dark" type="submit">Send reset link &rarr;</button></form><p class="auth-message" id="auth-message" role="status"></p><div class="form-foot"><a href="#login">Back to log in</a></div></div></div>`;
   if (route === "reset-password") app.innerHTML = `<div class="container page"><div class="form-shell"><span class="eyebrow">Account recovery</span><h1>Choose a new password.</h1><form id="new-password-form"><label class="form-field"><span>New password</span><input name="password" type="password" minlength="8" autocomplete="new-password" required></label><button class="button button-dark" type="submit">Update password &rarr;</button></form><p class="auth-message" id="auth-message" role="status"></p></div></div>`;
   updateNav();
@@ -21424,7 +21491,8 @@ function setProductSaveState(form, message, state = "loading") {
 document.addEventListener("submit", async (event) => {
   const form = event.target;
   if (!(form instanceof HTMLFormElement)) return;
-  if (!["auth-form", "edit-profile-form", "business-form", "portal-search-form", "reset-request-form", "new-password-form", "business-product-form", "access-code-form", "redeem-access-code-form"].includes(form.id)) return;
+  const communityForm = form.matches("[data-community-post-form], [data-community-reply-form]");
+  if (!communityForm && !["auth-form", "edit-profile-form", "business-form", "portal-search-form", "reset-request-form", "new-password-form", "business-product-form", "access-code-form", "redeem-access-code-form"].includes(form.id)) return;
   event.preventDefault();
   if (!supabase) return status(initError || "Supabase is not configured.", true);
   const data = new FormData(form);
@@ -21550,6 +21618,15 @@ document.addEventListener("submit", async (event) => {
       await loadWorkspaceData(supabase, currentUser);
       renderAuthRoute();
       portalToast("Access added to your library.");
+    } else if (communityForm) {
+      const body = String(data.get("body") || "").trim(), productId = form.dataset.productId;
+      if (!body) throw new Error("Write something before you post.");
+      if (button) button.textContent = form.matches("[data-community-post-form]") ? "Publishing\u2026" : "Replying\u2026";
+      const row = form.matches("[data-community-post-form]") ? { product_id: productId, author_id: currentUser.id, body } : { post_id: form.dataset.postId, author_id: currentUser.id, body };
+      const { error } = await supabase.from(form.matches("[data-community-post-form]") ? "community_posts" : "community_comments").insert(row);
+      if (error) throw error;
+      await loadCommunityFeed(supabase, productId);
+      portalToast(form.matches("[data-community-post-form]") ? "Update published." : "Reply added.");
     } else if (form.id === "business-form") {
       const handle = String(data.get("handle") || "").trim().toLowerCase();
       const business = {
@@ -21697,6 +21774,35 @@ document.addEventListener("submit", async (event) => {
       button.disabled = false;
       if (originalButtonText !== void 0) button.textContent = originalButtonText;
     }
+  }
+}, true);
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-community-delete-post], [data-community-refresh]");
+  if (!button) return;
+  event.preventDefault();
+  if (button.matches("[data-community-refresh]")) {
+    button.disabled = true;
+    try {
+      await loadCommunityFeed(supabase, button.dataset.productId);
+    } catch (error) {
+      portalToast(error?.message || "Could not refresh this community.");
+    } finally {
+      button.disabled = false;
+    }
+    return;
+  }
+  if (!window.confirm("Delete this community post and its replies?")) return;
+  const postId = button.dataset.communityDeletePost;
+  const feed = button.closest("[data-community-feed]"), productId = feed?.dataset.productId;
+  button.disabled = true;
+  try {
+    const { error } = await supabase.from("community_posts").delete().eq("id", postId);
+    if (error) throw error;
+    await loadCommunityFeed(supabase, productId);
+    portalToast("Community post deleted.");
+  } catch (error) {
+    button.disabled = false;
+    portalToast(error?.message || "Could not delete that post.");
   }
 }, true);
 document.addEventListener("click", async (event) => {
@@ -22031,7 +22137,7 @@ document.addEventListener("click", async (event) => {
     return;
   }
   if (target.matches("[data-edit-profile]")) {
-    openProfileEditor({ user: currentUser, name: displayName(), escapeHTML: escapeHTML6 });
+    openProfileEditor({ user: currentUser, name: displayName2(), escapeHTML: escapeHTML6 });
     return;
   }
   if (target.matches("[data-close-modal]")) {

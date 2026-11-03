@@ -72,7 +72,7 @@ export async function loadWorkspaceData(supabase, user) {
     supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
     supabase.from('businesses').select('*, products(*, prices(*), product_deliverables(*))').eq('owner_id', user.id).maybeSingle(),
     supabase.from('orders').select('id,order_number,amount_paise,currency,status,created_at,paid_at,is_demo,products(name,slug),businesses(name,handle)').eq('buyer_id', user.id).order('created_at', { ascending: false }),
-    supabase.from('entitlements').select('id,business_id,status,starts_at,ends_at,products(name,slug,type,product_deliverables(id,title,kind,storage_path,url)),businesses(name,handle)').eq('buyer_id', user.id).order('created_at', { ascending: false }),
+    supabase.from('entitlements').select('id,business_id,product_id,status,starts_at,ends_at,products(name,slug,type,headline,product_deliverables(id,title,kind,storage_path,url)),businesses(name,handle)').eq('buyer_id', user.id).order('created_at', { ascending: false }),
   ]);
   if (businessError) throw businessError;
   if (purchasesError) throw purchasesError;
