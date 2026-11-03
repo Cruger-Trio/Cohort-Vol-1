@@ -1,5 +1,6 @@
 export default function handler(_request, response) {
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = process.env;
+  const SUPABASE_URL = process.env.SUPABASE_URL?.trim();
+  const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY?.trim();
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     response.status(503).json({ error: 'Supabase public configuration is missing.' });
