@@ -2,6 +2,7 @@
 import { workspace, loadWorkspaceData, moneyFromPaise, slugify } from '../data/workspace.js';
 import { businessProducts, businessProductForm, faqEditorRow, pricingOptionCard, pricingOptionDialog, pricingDialogQuestion, savePricingOptionDialog } from './business/products.js';
 import { businessCustomers } from './business/customers.js';
+import { businessAccess, accessCodeRows, accessCodeCreatedDialog } from './business/access.js';
 import { businessPayments } from './business/payments.js';
 import { businessHome, businessAnalytics } from './business/analytics.js';
 import { portalSubpage, openProfileEditor } from './personal.js';
@@ -63,16 +64,16 @@ let activeProfileTab = 'created';
 let activeCustomerTab = 'Customers';
 const iconSvg = {home:'<svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',messages:'<svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 4a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg>',partners:'<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm7-7.8a4 4 0 0 1 0 7.6M20 21v-2a4 4 0 0 0-3-3.9"/></svg>',affiliates:'<svg viewBox="0 0 24 24"><circle cx="6" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><circle cx="6" cy="19" r="3"/><path d="m8.7 6.5 6.6 11m0-11L8.7 17.5"/></svg>',workforce:'<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18m-11 0v2h4v-2"/></svg>',communities:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',settings:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.7 1.7 0 0 0-1.9.3l-.1.1h-3.4l-.1-.2a1.7 1.7 0 0 0-1.6-1.1 1.7 1.7 0 0 0-.9.3l-.2.1L6.8 17l.1-.2a1.7 1.7 0 0 0-.3-1.9l-.1-.1v-3.4l.2-.1a1.7 1.7 0 0 0 1.1-1.6 1.7 1.7 0 0 0-.3-.9l-.1-.2 1.7-2.9.2.1a1.7 1.7 0 0 0 1.9-.3l.1-.1h3.4l.1.2a1.7 1.7 0 0 0 1.6 1.1 1.7 1.7 0 0 0 .9-.3l.2-.1 2.9 1.7-.1.2a1.7 1.7 0 0 0 .3 1.9l.1.1v3.4z"/></svg>'};
 const portalLinks = [['home','Home'],['orders','Orders'],['library','My library'],['messages','Messages'],['partners','Partners'],['affiliates','Affiliates'],['workforce','Workforce'],['communities','Communities']];
-const businessIcons={home:iconSvg.home,analytics:'<svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 3 6-7"/></svg>',products:'<svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5zm-9 5v9l9 5 9-5V8M12 13v9"/></svg>',payments:'<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg>',customers:iconSvg.partners,websites:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>',ads:'<svg viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 13v-2zm0 2-1 5h5l2-4m5-5 2-5"/></svg>',workforce:iconSvg.workforce,affiliates:iconSvg.affiliates,cards:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18m-14 6h4"/></svg>',support:iconSvg.messages,more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>'};
+const businessIcons={home:iconSvg.home,analytics:'<svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 3 6-7"/></svg>',products:'<svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5zm-9 5v9l9 5 9-5V8M12 13v9"/></svg>',payments:'<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg>',customers:iconSvg.partners,access:'<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9m-4 0h4v4M11 15h6"/></svg>',websites:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>',ads:'<svg viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 13v-2zm0 2-1 5h5l2-4m5-5 2-5"/></svg>',workforce:iconSvg.workforce,affiliates:iconSvg.affiliates,cards:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18m-14 6h4"/></svg>',support:iconSvg.messages,more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>'};
 function displayName() { return workspace.profile?.full_name || currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'Creator'; }
 function initialsFor(value) { return String(value || 'G').trim().split(/\s+/).slice(0,2).map(x => x[0]).join('').toUpperCase(); }
 function portalShell(content, active='profile') {
   const name=displayName(), business=getBusiness();
   return `<div class="portal-app"><header class="portal-topbar"><a class="portal-brand" href="#portal/profile"><span class="brand-mark">C</span> Cohort</a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search Cohort" aria-label="Search Cohort"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><button class="portal-icon-button" data-notifications aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button><button class="portal-account-button" data-menu-toggle aria-expanded="false"><span class="portal-avatar">${escapeHTML(initialsFor(name))}</span><span class="account-name">${escapeHTML(name)}</span><span aria-hidden="true">v</span></button><div class="portal-account-menu" id="portal-account-menu" hidden><div class="account-menu-head"><span class="portal-avatar">${escapeHTML(initialsFor(name))}</span><span><b>${escapeHTML(name)}</b><small>${escapeHTML(currentUser?.email||'')}</small></span></div><a href="#portal/profile">View profile</a><a href="#portal/resolution">Resolution center</a><a href="#portal/orders">Orders</a><a href="#portal/library">My library</a><a href="#portal/settings">Settings</a><a href="#portal/help">Help and support</a><a href="#portal/language">Language</a><a href="#portal/legal">Legal</a><button data-signout>Sign out</button><div class="theme-picks"><button data-theme="dark">Dark</button><button data-theme="light">Light</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar"><div class="portal-workspace-switch"><button class="workspace-selected">${escapeHTML(initialsFor(name))}</button>${business?`<a class="workspace-business" href="#business/home" title="Open ${escapeHTML(business.name)}">${escapeHTML(initialsFor(business.name))}</a>`:''}${business?`<button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add business">+</button>`:`<a href="#portal/create-business" aria-label="Create business">+</a>`}</div><span class="sidebar-label">Personal</span><nav class="portal-nav">${portalLinks.map(([route,label])=>`<a class="portal-nav-link ${active===route?'active':''}" href="#portal/${route}"><span>${iconSvg[route]||iconSvg.communities}</span>${label}</a>`).join('')}</nav><div class="portal-sidebar-bottom"><a class="portal-nav-link ${active==='settings'?'active':''}" href="#portal/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main">${content}</main></div></div>`;
 }
-const businessRoutes=['business/home','business/analytics','business/products','business/product-new','business/payments','business/customers','business/websites','business/ads','business/workforce','business/affiliates','business/cards','business/support','business/more','business/developer','business/settings'];
-const bizSections=[['', [['home','Home'],['analytics','Analytics'],['products','Products'],['payments','Payments'],['customers','Customers'],['websites','Websites']]],['Grow',[['ads','Ads'],['workforce','Workforce'],['affiliates','Affiliates']]],['Operations',[['cards','Cards'],['support','Support'],['more','More']]]];
-const bizLabel={home:'Home',analytics:'Analytics',products:'Products','product-new':'New product',payments:'Payments',customers:'Customers',websites:'Websites',ads:'Ads',workforce:'Workforce',affiliates:'Affiliates',cards:'Cards',support:'Support',more:'More',developer:'Developer',settings:'Settings'};
+const businessRoutes=['business/home','business/analytics','business/products','business/product-new','business/payments','business/customers','business/access','business/websites','business/ads','business/workforce','business/affiliates','business/cards','business/support','business/more','business/developer','business/settings'];
+const bizSections=[['', [['home','Home'],['analytics','Analytics'],['products','Products'],['payments','Payments'],['customers','Customers'],['access','Access'],['websites','Websites']]],['Grow',[['ads','Ads'],['workforce','Workforce'],['affiliates','Affiliates']]],['Operations',[['cards','Cards'],['support','Support'],['more','More']]]];
+const bizLabel={home:'Home',analytics:'Analytics',products:'Products','product-new':'New product',payments:'Payments',customers:'Customers',access:'Access',websites:'Websites',ads:'Ads',workforce:'Workforce',affiliates:'Affiliates',cards:'Cards',support:'Support',more:'More',developer:'Developer',settings:'Settings'};
 function getBusiness(){return workspace.business;}
 function businessShell(content,active,business){
  const name=business.name||'Your business';
@@ -87,6 +88,7 @@ function businessPage(route,b,id){
  if(route==='analytics') return businessAnalytics(b);
  if(route==='payments') return businessPayments(workspace.orders);
  if(route==='customers') return businessCustomers(b, activeCustomerTab);
+ if(route==='access') return businessAccess(b);
  if(route==='websites') return `${businessHeading('STOREFRONT','Websites','Manage the link customers use to find your Cohort business.')}<section class="portal-panel business-form"><h2>${b.website?'Storefront link':'Add a website'}</h2><p class="settings-row-note">Add your website or public storefront URL. This saves the link only; it does not publish a website.</p><form id="business-website-form"><label class="form-field"><span>Website URL</span><input name="website_url" type="url" value="${escapeHTML(b.website||'')}" placeholder="https://your-site.in"></label><button class="button button-primary" type="submit">Save website link</button><p class="auth-message" id="auth-message" role="status"></p></form></section><section class="portal-panel website-preview"><b>Cohort storefront</b><p>${escapeHTML(b.name)} | ${escapeHTML(b.handle||'your-page')}</p><span>Product catalog and public checkout will be enabled in a later phase.</span></section>`;
  if(route==='ads') return `${businessHeading('GROW','Ads','Promote products when your storefront is ready.')}<section class="portal-panel feature-placeholder"><span class="feature-letter">A</span><h2>Campaigns are coming soon</h2><p>Campaign setup will connect after products, checkout and audience targeting are ready.</p><button class="portal-action" data-business-notice="Promotions are not connected yet.">Create a campaign</button></section>`;
  if(route==='workforce') return `${businessHeading('TEAM','Workforce','Manage people who help run your creator business.')}<section class="portal-panel feature-placeholder"><span class="feature-letter">T</span><h2>Your team starts here</h2><p>Invite teammates with clear roles once team access controls are ready.</p><button class="portal-action" data-business-notice="Team invites will be available with role-based access setup.">Invite teammate</button></section>`;
@@ -146,7 +148,7 @@ function renderAuthRoute() {
   const portalRoutes=['portal/profile','portal/home','portal/orders','portal/library','portal/messages','portal/partners','portal/affiliates','portal/workforce','portal/communities','portal/settings','portal/create-business','portal/onboarding','portal/resolution','portal/help','portal/language','portal/legal'];
   const isBusinessRoute=route.startsWith('business/');
   document.body.classList.toggle('portal-mode',portalRoutes.includes(route)||isBusinessRoute);
-  document.body.classList.toggle('portal-light',portalRoutes.includes(route)&&localStorage.getItem('cohort-portal-theme')==='light');
+  document.body.classList.toggle('portal-light',(portalRoutes.includes(route)||isBusinessRoute)&&localStorage.getItem('cohort-portal-theme')==='light');
   if(route==='home'){document.body.classList.remove('portal-mode','portal-light');updateNav();return;}
   if(isBusinessRoute){renderBusinessPage(route);updateNav();return;}
   if(route==='signup-creator'&&currentUser){localStorage.setItem(`cohort-creator-intent:${currentUser.id}`,'1');location.hash='portal/onboarding';return;}
@@ -159,7 +161,9 @@ function renderAuthRoute() {
 }
 function showError(error) {
   const message = error?.message || 'Something went wrong. Please try again.';
-  status(message, true);
+  const node = document.querySelector('#auth-message, #access-code-status, #redeem-access-status');
+  if (node) { node.textContent = message; node.classList.add('auth-error'); }
+  else portalToast(message);
 }
 function setProductSaveState(form, message, state='loading') {
   const indicator=form.querySelector('#product-save-indicator');if(!indicator)return;
@@ -171,7 +175,7 @@ function setProductSaveState(form, message, state='loading') {
 document.addEventListener('submit', async event => {
   const form = event.target;
   if (!(form instanceof HTMLFormElement)) return;
-  if (!['auth-form', 'edit-profile-form', 'business-form', 'portal-search-form', 'reset-request-form', 'new-password-form', 'business-product-form'].includes(form.id)) return;
+  if (!['auth-form', 'edit-profile-form', 'business-form', 'portal-search-form', 'reset-request-form', 'new-password-form', 'business-product-form', 'access-code-form', 'redeem-access-code-form'].includes(form.id)) return;
   event.preventDefault();
   if (!supabase) return status(initError || 'Supabase is not configured.', true);
   const data = new FormData(form);
@@ -224,6 +228,46 @@ document.addEventListener('submit', async event => {
       document.querySelector('.portal-modal-backdrop')?.remove();
       renderAuthRoute();
       portalToast('Profile saved.');
+    } else if (form.id === 'access-code-form') {
+      const business = getBusiness();
+      if (!business || !currentUser) throw new Error('Sign in to create an access code.');
+      const productId = String(data.get('product_id') || '');
+      const product = business.products.find(item => item.id === productId);
+      if (!product) throw new Error('Choose one of your products.');
+      const label = String(data.get('label') || '').trim() || `Invite · ${product.name}`;
+      const bytes = crypto.getRandomValues(new Uint8Array(20));
+      const raw = [...bytes].map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase();
+      const code = `COH-${raw.match(/.{1,5}/g).join('-')}`;
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(code.toUpperCase()));
+      const codeHash = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('');
+      const accessDays = String(data.get('access_days') || '');
+      const { error } = await supabase.from('product_access_codes').insert({
+        business_id: business.id,
+        product_id: product.id,
+        created_by: currentUser.id,
+        label,
+        code_hash: codeHash,
+        code_hint: code.slice(-5),
+        max_redemptions: Number(data.get('max_redemptions') || 1),
+        access_days: accessDays ? Number(accessDays) : null,
+      });
+      if (error) throw error;
+      await loadWorkspaceData(supabase, currentUser);
+      const list = document.querySelector('#access-code-list');
+      if (list) list.innerHTML = accessCodeRows();
+      form.reset();
+      accessCodeCreatedDialog(code, label);
+    } else if (form.id === 'redeem-access-code-form') {
+      const code = String(data.get('access_code') || '').trim().toUpperCase();
+      const field = form.querySelector('[name="access_code"]');
+      const submit = form.querySelector('button[type="submit"]');
+      if (submit) submit.textContent = 'Checking code…';
+      if (field) field.disabled = true;
+      const { error } = await supabase.rpc('redeem_product_access', { p_code: code });
+      if (error) throw error;
+      await loadWorkspaceData(supabase, currentUser);
+      renderAuthRoute();
+      portalToast('Access added to your library.');
     } else if (form.id === 'business-form') {
       const handle = String(data.get('handle') || '').trim().toLowerCase();
       const business = {
@@ -243,6 +287,10 @@ document.addEventListener('submit', async event => {
       portalToast('Your business workspace is ready.');
     } else if (form.id === 'business-product-form') {
       const b=getBusiness(),id=form.dataset.productId,old=Array.isArray(b.products)?b.products.find(p=>p?.id===id):null,pricingOptions=[],faqRows=[...form.querySelectorAll('.faq-editor-row')],faqs=faqRows.map(row=>({question:row.querySelector('input')?.value.trim()||'',answer:row.querySelector('textarea')?.value.trim()||''})).filter(f=>f.question||f.answer);
+      const resourceTitle=String(data.get('resource_title')||'').trim(),resourceValue=String(data.get('resource_url')||'').trim(),deliverable=form._deliverableFile;
+      let resourceUrl=null;
+      if(resourceTitle||resourceValue){if(!resourceTitle||!resourceValue)throw new Error('Add both a name and a URL for this resource.');try{resourceUrl=new URL(resourceValue);}catch{throw new Error('Enter a valid hosted resource URL.');}if(!['https:','http:'].includes(resourceUrl.protocol))throw new Error('Resource links must start with http:// or https://.');}
+      if(deliverable&&deliverable.size>50*1024*1024)throw new Error('Product files must be 50 MB or smaller.');
       [...form.querySelectorAll('[data-pricing-option]')].forEach((card,i)=>{const val=prefix=>card.querySelector(`[name^="${prefix}_"]`),cadence=val('pricing_cadence')?.value||'once',amount=Number(val('pricing_amount')?.value||0),checkoutQuestions=!!val('pricing_questions')?.checked,questions=[...card.querySelectorAll('[data-question-source]')].map(row=>({title:row.querySelector('[name^="checkout_title_"]')?.value.trim()||'',placeholder:row.querySelector('[name^="checkout_placeholder_"]')?.value.trim()||'',optional:!!row.querySelector('[name^="checkout_optional_"]')?.checked})).filter(q=>q.title||q.placeholder);pricingOptions.push({id:card.dataset.priceId||null,name:val('pricing_internal_enabled')?.checked?(val('pricing_internal')?.value.trim()||'Internal plan'):(cadence==='once'?'One-time':cadence),amount,currency:'INR',cadence,checkoutQuestions,questions,stock:val('pricing_stock')?.value?Number(val('pricing_stock').value):null,waitlist:!!val('pricing_waitlist')?.checked,hideFromStore:!!val('pricing_hidden')?.checked,autoExpire:!!val('pricing_expire')?.checked,expireDays:Number(val('pricing_expire_days')?.value||30),allowMultiple:!!val('pricing_multiple')?.checked,internalName:val('pricing_internal_enabled')?.checked?val('pricing_internal')?.value.trim()||'': '',buttonText:val('pricing_button')?.value||'default'});});
       const name=String(data.get('product_name')||'').trim(),visibility=String(data.get('visibility')||'draft'),product={business_id:b.id,slug:old?.slug||slugify(name),name,headline:String(data.get('headline')||'').trim()||null,type:String(data.get('product_type')||'Digital product'),description:String(data.get('description')||'').trim(),faqs,media_url:form.dataset.mediaPreviewOnly==='true'?'':(form.dataset.mediaUrl||old?.mediaUrl||null),status:old?.status==='archived'?'archived':visibility,listed:visibility==='visible'};
       setProductSaveState(form,'Saving product detailsâ€¦');
@@ -260,9 +308,9 @@ document.addEventListener('submit', async event => {
       const mediaFile=form._mediaFile;
       if(mediaFile)setProductSaveState(form,'Uploading product imageâ€¦');
       if(mediaFile){if(!['image/jpeg','image/png','image/webp'].includes(mediaFile.type)||mediaFile.size>5*1024*1024)throw new Error('Product preview must be JPG, PNG or WebP under 5 MB.');const ext=mediaFile.type.split('/')[1].replace('jpeg','jpg'),path=`${currentUser.id}/${savedProduct.id}/cover-${Date.now()}.${ext}`,{error:uploadError}=await supabase.storage.from('product-media').upload(path,mediaFile,{contentType:mediaFile.type,upsert:true});if(uploadError)throw uploadError;const publicUrl=supabase.storage.from('product-media').getPublicUrl(path).data.publicUrl,{error:updateError}=await supabase.from('products').update({media_url:publicUrl}).eq('id',savedProduct.id);if(updateError)throw updateError;}
-      const deliverable=form._deliverableFile;
       if(deliverable)setProductSaveState(form,'Uploading private customer filesâ€¦');
       if(deliverable){if(deliverable.size>50*1024*1024)throw new Error('Product files must be 50 MB or smaller.');const safeName=deliverable.name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g,'-').slice(-120)||'download',path=`${currentUser.id}/${savedProduct.id}/${Date.now()}-${safeName}`,{error:uploadError}=await supabase.storage.from('deliverables').upload(path,deliverable,{contentType:deliverable.type||'application/octet-stream',upsert:false});if(uploadError)throw uploadError;const {error:rowError}=await supabase.from('product_deliverables').insert({product_id:savedProduct.id,kind:'file',title:deliverable.name.slice(0,120),storage_path:path});if(rowError)throw rowError;}
+      if(resourceUrl){setProductSaveState(form,'Saving member resource link...');const {error:resourceError}=await supabase.from('product_deliverables').insert({product_id:savedProduct.id,kind:'link',title:resourceTitle.slice(0,120),url:resourceUrl.toString()});if(resourceError)throw resourceError;}
       setProductSaveState(form,'Publishing product and refreshing your storefrontâ€¦');
       await loadWorkspaceData(supabase, currentUser);const creatorFlow=localStorage.getItem(`cohort-creator-intent:${currentUser.id}`)==='1';location.hash=creatorFlow?'portal/onboarding':'business/products';portalToast('Product saved to Cohort.');
     } else if (form.id === 'business-website-form') {
@@ -299,6 +347,7 @@ document.addEventListener('submit', async event => {
     if(form.id==='business-product-form')setProductSaveState(form,error?.message||'Save failed. Please try again.','error');
     showError(error);
   } finally {
+    if(form.id==='redeem-access-code-form')form.querySelector('[name="access_code"]')?.removeAttribute('disabled');
     form.dataset.saving='false';if (button) {button.disabled = false;if(originalButtonText!==undefined)button.textContent=originalButtonText;}
   }
 }, true);
@@ -306,10 +355,13 @@ document.addEventListener('submit', async event => {
 document.addEventListener('click', async event => {
   const menu = document.querySelector('#portal-account-menu');
   if (menu && !event.target.closest('.portal-top-actions')) menu.hidden = true;
-  const target = event.target.closest('[data-menu-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-settings], [data-copy-link], [data-customer-download]');
+  const target = event.target.closest('[data-menu-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-settings], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete]');
   if (!target) return;
   event.preventDefault();
   if(target.matches('[data-customer-download]')){const path=target.dataset.customerDownload,name=(target.dataset.downloadName||'cohort-download').replace(/[^a-zA-Z0-9._-]+/g,'-');target.disabled=true;target.textContent='Preparingâ€¦';try{const {data,error}=await supabase.storage.from('deliverables').download(path);if(error)throw error;const url=URL.createObjectURL(data),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1500);portalToast('Your download is ready.');}catch(error){portalToast(error?.message||'Could not access this file.');}finally{target.disabled=false;target.textContent='Download';}return;}
+  if(target.matches('[data-deliverable-delete]')){if(!window.confirm('Remove this resource from the product? Customers will lose access to it.'))return;const form=document.querySelector('#business-product-form'),productId=form?.dataset.productId,path=target.dataset.deliverablePath;try{if(path){const {error:storageError}=await supabase.storage.from('deliverables').remove([path]);if(storageError)throw storageError;}const {error}=await supabase.from('product_deliverables').delete().eq('id',target.dataset.deliverableDelete).eq('product_id',productId);if(error)throw error;await loadWorkspaceData(supabase,currentUser);renderAuthRoute();portalToast('Product resource removed.');}catch(error){portalToast(error?.message||'Could not remove this resource.');}return;}
+  if(target.matches('[data-access-code-disable]')){if(!window.confirm('Revoke this code? Anyone who has not redeemed it will lose access to this invite.'))return;try{const {error}=await supabase.from('product_access_codes').update({disabled_at:new Date().toISOString()}).eq('id',target.dataset.accessCodeDisable).eq('business_id',getBusiness()?.id);if(error)throw error;await loadWorkspaceData(supabase,currentUser);renderAuthRoute();portalToast('Access code revoked.');}catch(error){portalToast(error?.message||'Could not revoke this code.');}return;}
+  if(target.matches('[data-access-revoke]')){if(!window.confirm('Revoke this member?s access now? They will no longer be able to open private files or resources.'))return;try{const {error}=await supabase.from('entitlements').update({status:'revoked',ends_at:new Date().toISOString()}).eq('id',target.dataset.accessRevoke).eq('business_id',getBusiness()?.id);if(error)throw error;await loadWorkspaceData(supabase,currentUser);renderAuthRoute();portalToast('Member access revoked.');}catch(error){portalToast(error?.message||'Could not revoke access.');}return;}
   if(target.matches('[data-copy-link]')){await navigator.clipboard.writeText(`${location.origin}${target.dataset.copyLink}`);portalToast('Product link copied.');return;}
   if (target.matches('[data-menu-toggle]')) {
     const panel = document.querySelector('#portal-account-menu');

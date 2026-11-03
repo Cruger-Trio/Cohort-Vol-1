@@ -1,0 +1,61 @@
+.access-layout{display:grid;grid-template-columns:minmax(300px,.82fr) minmax(400px,1.18fr);gap:15px;align-items:start}
+.access-create-panel,.access-list-panel{padding:20px}
+.access-panel-heading{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px}
+.access-panel-heading>div{min-width:0;flex:1}
+.access-panel-heading h2{margin:1px 0 5px;font:700 15px var(--display)}
+.access-panel-heading p{margin:0;color:#999b93;font-size:10px;line-height:1.55}
+.access-panel-icon{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border:1px solid #35372f;border-radius:10px;background:#22251d;color:#c8e777;font-size:17px}
+.access-count{min-width:24px;height:24px;display:grid;place-items:center;border-radius:7px;background:#272923;color:#cdd0c6;font-size:10px}
+#access-code-form{display:grid;gap:12px}
+#access-code-form .form-field{margin:0}
+#access-code-form .form-field>span,.deliverable-link-fields .form-field>span{margin-bottom:6px;color:#c9cbc3;font-size:10px}
+#access-code-form input,#access-code-form select,.deliverable-link-fields input{width:100%;min-height:40px;padding:0 11px;border:1px solid #383a34;border-radius:8px;background:#111210;color:#f1f2ec;font:inherit;font-size:11px}
+.access-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#access-code-form .button{min-height:42px;justify-content:center;margin-top:3px}
+.access-form-status{min-height:16px;margin:0;color:#ee9388;font-size:10px}
+.access-safety-note{display:flex;gap:9px;margin-top:15px;padding:11px;border:1px solid #34352d;border-radius:9px;background:#171814}
+.access-safety-note>span{width:17px;height:17px;flex:0 0 17px;display:grid;place-items:center;border-radius:50%;background:#2b3022;color:#cfeb84;font-size:10px;font-weight:700}
+.access-safety-note p{margin:0;color:#9b9d95;font-size:9px;line-height:1.55}
+.access-code-list{display:grid;gap:8px}
+.access-code-row{display:flex;align-items:center;gap:11px;min-width:0;padding:12px;border:1px solid #2d2f2a;border-radius:10px;background:#151613}
+.access-code-symbol{width:32px;height:32px;flex:0 0 32px;display:grid;place-items:center;border-radius:9px;background:#22271b;color:#c5e85b;font-size:16px}
+.access-code-detail{display:grid;gap:4px;min-width:0;flex:1}
+.access-code-detail b{overflow:hidden;color:#edeee8;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.access-code-detail>span,.access-code-detail small{color:#999b93;font-size:9px;line-height:1.4}
+.access-code-status{padding:5px 8px;border-radius:20px;background:#302b23;color:#c9b991;font-size:8px;font-weight:700;white-space:nowrap}
+.access-code-status.is-ready{background:#26301d;color:#c5e878}
+.access-code-row .portal-action{min-height:30px;padding:0 9px;font-size:9px}
+.access-empty{min-height:180px}
+.access-empty>span{font-size:23px;color:#b9d771}
+.access-issued-modal{max-width:470px}
+.issued-access-code{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 12px;padding:13px;border:1px solid #35372f;border-radius:10px;background:#111210}
+.issued-access-code code{overflow-wrap:anywhere;color:#d6f48a;font:700 15px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.07em}
+.issued-access-code .portal-action{flex:none}
+.redeem-access-panel{display:grid;grid-template-columns:minmax(220px,1fr) minmax(270px,1fr);align-items:center;gap:10px 20px;margin-bottom:16px;padding:17px 19px}
+.redeem-access-copy{display:flex;align-items:center;gap:12px}
+.redeem-access-icon{width:38px;height:38px;flex:none;display:grid;place-items:center;border-radius:11px;background:#28311d;color:#c7e679;font-size:17px}
+.redeem-access-copy h2{margin:0 0 4px;font:700 13px var(--display)}
+.redeem-access-copy p{margin:0;color:#999b93;font-size:10px;line-height:1.5}
+#redeem-access-code-form{display:flex;gap:8px}
+#redeem-access-code-form input{flex:1;min-width:0;height:40px;padding:0 11px;border:1px solid #383a34;border-radius:8px;background:#111210;color:#f1f2ec;font:inherit;font-size:11px}
+#redeem-access-code-form .button{flex:none;min-height:40px;padding:0 13px;font-size:10px}
+#redeem-access-status{grid-column:2;margin:0;font-size:10px}
+.library-resource{flex-wrap:wrap}
+.library-resource-note{flex:1 0 100%;margin:0 0 0 43px;color:#aeb0a8;font-size:10px;line-height:1.5;overflow-wrap:anywhere}
+.library-resource .is-disabled{opacity:.55;cursor:not-allowed}
+.access-revoke-button{display:block;margin-top:7px;padding:3px 0;border:0;background:transparent;color:#f08b7f;font:inherit;font-size:9px;text-align:left;cursor:pointer}
+.deliverable-actions{display:flex;align-items:center;gap:9px;color:#8e9088;font-size:10px}
+.deliverable-link-fields{display:grid;grid-template-columns:1fr 1.2fr;gap:9px;margin:12px 0 4px}
+.deliverable-link-fields .form-field{margin:0}
+.deliverable-link-fields small{grid-column:1/-1;color:#92948b;font-size:9px;line-height:1.5}
+.saved-deliverable .portal-action{margin-left:auto;min-height:29px;padding:0 8px;font-size:9px}
+.portal-light .access-create-panel,.portal-light .access-list-panel,.portal-light .redeem-access-panel{background:#fff;border-color:#ddd}
+.portal-light .access-panel-heading p,.portal-light .redeem-access-copy p{color:#666}
+.portal-light #access-code-form input,.portal-light #access-code-form select,.portal-light .deliverable-link-fields input,.portal-light #redeem-access-code-form input{background:#fff;color:#222;border-color:#ddd}
+.portal-light #access-code-form .form-field>span,.portal-light .deliverable-link-fields .form-field>span{color:#444}
+.portal-light .access-safety-note,.portal-light .access-code-row,.portal-light .issued-access-code{background:#fafaf7;border-color:#e4e4dd}
+.portal-light .access-safety-note p,.portal-light .access-code-detail b{color:#30312c}
+.portal-light .access-code-detail>span,.portal-light .access-code-detail small{color:#70726a}
+.portal-light .issued-access-code code{color:#425b23}
+@media(max-width:900px){.access-layout{grid-template-columns:1fr}.redeem-access-panel{grid-template-columns:1fr}#redeem-access-status{grid-column:1}}
+@media(max-width:560px){.access-create-panel,.access-list-panel{padding:15px}.access-code-row{flex-wrap:wrap}.access-code-detail{min-width:calc(100% - 60px)}.access-code-row .access-code-status{margin-left:43px}.access-code-row .portal-action{margin-left:auto}.redeem-access-panel{padding:14px}.#redeem-access-code-form{flex-direction:column}.#redeem-access-code-form .button{justify-content:center}.deliverable-link-fields{grid-template-columns:1fr}}

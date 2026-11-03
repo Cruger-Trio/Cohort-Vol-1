@@ -6,6 +6,7 @@ export const workspace = {
   purchases: [],
   memberships: [],
   catalog: [],
+  accessCodes: [],
 };
 
 const initialsFor = value => String(value || 'C').trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
@@ -61,10 +62,10 @@ export function fromProduct(row) {
 /** Fetch the authenticated owner workspace and RLS-filtered public catalog. */
 export async function loadWorkspaceData(supabase, user) {
   if (!supabase) {
-    Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], catalog: [] });
+    Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], catalog: [], accessCodes: [] });
     return workspace;
   }
-  if (!user) Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [] });
+  if (!user) Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], accessCodes: [] });
 
   if (user) {
   const [{ data: profile }, { data: business, error: businessError }, { data: purchases, error: purchasesError }, { data: memberships, error: membershipsError }] = await Promise.all([
@@ -82,17 +83,21 @@ export async function loadWorkspaceData(supabase, user) {
   workspace.memberships = memberships || [];
 
   if (workspace.business) {
-    const [{ data: orders, error }, { data: entitlements, error: entitlementsError }] = await Promise.all([
+    const [{ data: orders, error }, { data: entitlements, error: entitlementsError }, { data: accessCodes, error: accessCodesError }] = await Promise.all([
       supabase.from('orders').select('id,order_number,buyer_id,business_id,product_id,amount_paise,currency,status,created_at,paid_at,is_demo,answers,products(name,slug)').eq('business_id', workspace.business.id).order('created_at', { ascending: false }),
       supabase.from('entitlements').select('id,buyer_id,business_id,product_id,status,starts_at,ends_at,products(name,prices(amount_paise,cadence))').eq('business_id', workspace.business.id).order('created_at', { ascending: false }),
+      supabase.from('product_access_codes').select('id,product_id,business_id,label,code_hint,max_redemptions,redemption_count,access_days,expires_at,disabled_at,created_at,products(name)').eq('business_id', workspace.business.id).order('created_at', { ascending: false }),
     ]);
     if (error) throw error;
     if (entitlementsError) throw entitlementsError;
+    if (accessCodesError) throw accessCodesError;
     workspace.orders = orders || [];
     workspace.entitlements = entitlements || [];
+    workspace.accessCodes = accessCodes || [];
   } else {
     workspace.orders = [];
     workspace.entitlements = [];
+    workspace.accessCodes = [];
   }
   }
 
