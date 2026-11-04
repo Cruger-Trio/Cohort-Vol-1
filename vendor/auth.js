@@ -20810,7 +20810,8 @@ var workspace = {
   purchases: [],
   memberships: [],
   catalog: [],
-  accessCodes: []
+  accessCodes: [],
+  customerRelationships: []
 };
 var initialsFor = (value) => String(value || "C").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 var moneyFromPaise = (value) => Number(value || 0) / 100;
@@ -20861,10 +20862,10 @@ function fromProduct(row) {
 }
 async function loadWorkspaceData(supabase2, user) {
   if (!supabase2) {
-    Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], catalog: [], accessCodes: [] });
+    Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], catalog: [], accessCodes: [], customerRelationships: [] });
     return workspace;
   }
-  if (!user) Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], accessCodes: [] });
+  if (!user) Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], accessCodes: [], customerRelationships: [] });
   if (user) {
     const [{ data: profile }, { data: business, error: businessError }, { data: purchases, error: purchasesError }, { data: memberships, error: membershipsError }] = await Promise.all([
       supabase2.from("profiles").select("*").eq("id", user.id).maybeSingle(),
@@ -20880,21 +20881,25 @@ async function loadWorkspaceData(supabase2, user) {
     workspace.purchases = purchases || [];
     workspace.memberships = memberships || [];
     if (workspace.business) {
-      const [{ data: orders, error }, { data: entitlements, error: entitlementsError }, { data: accessCodes, error: accessCodesError }] = await Promise.all([
+      const [{ data: orders, error }, { data: entitlements, error: entitlementsError }, { data: accessCodes, error: accessCodesError }, { data: customerRelationships, error: customerRelationshipsError }] = await Promise.all([
         supabase2.from("orders").select("id,order_number,buyer_id,business_id,product_id,amount_paise,currency,status,created_at,paid_at,is_demo,answers,products(name,slug)").eq("business_id", workspace.business.id).order("created_at", { ascending: false }),
         supabase2.from("entitlements").select("id,buyer_id,business_id,product_id,status,starts_at,ends_at,products(name,prices(amount_paise,cadence))").eq("business_id", workspace.business.id).order("created_at", { ascending: false }),
-        supabase2.from("product_access_codes").select("id,product_id,business_id,label,code_hint,max_redemptions,redemption_count,access_days,expires_at,disabled_at,created_at,products(name)").eq("business_id", workspace.business.id).order("created_at", { ascending: false })
+        supabase2.from("product_access_codes").select("id,product_id,business_id,label,code_hint,max_redemptions,redemption_count,access_days,expires_at,disabled_at,created_at,products(name)").eq("business_id", workspace.business.id).order("created_at", { ascending: false }),
+        supabase2.from("customer_relationships").select("business_id,customer_id,tags,note,updated_at").eq("business_id", workspace.business.id)
       ]);
       if (error) throw error;
       if (entitlementsError) throw entitlementsError;
       if (accessCodesError) throw accessCodesError;
+      if (customerRelationshipsError) throw customerRelationshipsError;
       workspace.orders = orders || [];
       workspace.entitlements = entitlements || [];
       workspace.accessCodes = accessCodes || [];
+      workspace.customerRelationships = customerRelationships || [];
     } else {
       workspace.orders = [];
       workspace.entitlements = [];
       workspace.accessCodes = [];
+      workspace.customerRelationships = [];
     }
   }
   await loadPublicCatalog(supabase2);
@@ -20971,26 +20976,100 @@ var escapeHTML2 = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => (
 function businessHeading2(kicker, title, copy = "", action = "") {
   return `<div class="portal-page-heading business-heading"><div><span class="portal-kicker">${kicker}</span><h1>${title}</h1>${copy ? `<p>${copy}</p>` : ""}</div>${action}</div>`;
 }
-function businessCustomers(b, activeCustomerTab2) {
-  const paid = workspace.orders.filter((order) => order.status === "paid"), buyers = /* @__PURE__ */ new Map();
+function businessCustomers(business, activeCustomerTab2) {
+  const relationships = new Map(workspace.customerRelationships.map((row) => [row.customer_id, row]));
+  const buyers = /* @__PURE__ */ new Map();
   for (const order of workspace.orders) {
     const key = order.buyer_id;
     if (!key) continue;
-    const answers = order.answers || {}, row = buyers.get(key) || { buyerId: key, name: order.is_demo ? answers.demo_customer_name || `Demo customer ${key.slice(0, 6)}` : `Customer ${key.slice(0, 6)}`, email: order.is_demo ? answers.demo_customer_email || "demo@cohort.invalid" : "Private to customer", status: order.status === "paid" ? "Joined" : "Order pending", country: order.is_demo ? answers.demo_country || "India" : "\u2014", totalSpend: 0, joinedAt: order.created_at, lastAccessed: "\u2014", isDemo: !!order.is_demo };
-    if (order.status === "paid") row.totalSpend += moneyFromPaise(order.amount_paise);
+    const answers = order.answers || {};
+    const row = buyers.get(key) || {
+      buyerId: key,
+      name: order.is_demo ? answers.demo_customer_name || `Demo customer ${key.slice(0, 6)}` : `Customer ${key.slice(0, 6)}`,
+      email: order.is_demo ? answers.demo_customer_email || "demo@cohort.invalid" : "Private to customer",
+      status: order.status === "paid" ? "Joined" : "Order pending",
+      country: order.is_demo ? answers.demo_country || "India" : "\u2014",
+      totalSpend: 0,
+      joinedAt: order.created_at,
+      isDemo: !!order.is_demo,
+      relationship: relationships.get(key)
+    };
+    if (order.status === "paid") {
+      row.totalSpend += moneyFromPaise(order.amount_paise);
+      row.status = "Joined";
+    }
     if (new Date(order.created_at) < new Date(row.joinedAt)) row.joinedAt = order.created_at;
     buyers.set(key, row);
   }
-  const rows = [...buyers.values()].sort((a, b2) => new Date(b2.joinedAt) - new Date(a.joinedAt));
-  const members = workspace.entitlements.map((item) => {
-    const demoOrder = workspace.orders.find((order) => order.buyer_id === item.buyer_id && order.is_demo), answers = demoOrder?.answers || {};
-    return { id: item.id, buyerId: item.buyer_id, name: demoOrder ? answers.demo_customer_name || "Demo customer" : `Member ${String(item.buyer_id || "").slice(0, 6)}`, email: demoOrder ? answers.demo_customer_email || "demo@cohort.invalid" : "Private to member", plan: item.products?.name || "Membership", status: item.status, price: moneyFromPaise(item.products?.prices?.[0]?.amount_paise), startedAt: item.starts_at, renewsAt: item.ends_at || "\u2014", isDemo: !!demoOrder };
+  const customers = [...buyers.values()].sort((a, b) => new Date(b.joinedAt) - new Date(a.joinedAt));
+  const memberships = workspace.entitlements.map((item) => {
+    const demoOrder = workspace.orders.find((order) => order.buyer_id === item.buyer_id && order.is_demo);
+    const answers = demoOrder?.answers || {};
+    return {
+      id: item.id,
+      buyerId: item.buyer_id,
+      name: demoOrder ? answers.demo_customer_name || "Demo customer" : `Member ${String(item.buyer_id || "").slice(0, 6)}`,
+      email: demoOrder ? answers.demo_customer_email || "demo@cohort.invalid" : "Private to member",
+      plan: item.products?.name || "Membership",
+      status: item.status,
+      price: moneyFromPaise(item.products?.prices?.[0]?.amount_paise),
+      startedAt: item.starts_at,
+      renewsAt: item.ends_at,
+      isDemo: !!demoOrder
+    };
   });
-  const list = activeCustomerTab2 === "Customers" ? rows : activeCustomerTab2 === "Memberships" ? members : [];
+  const list = activeCustomerTab2 === "Customers" ? customers : activeCustomerTab2 === "Memberships" ? memberships : [];
   const empty = activeCustomerTab2 === "Customers" ? "No customers yet" : activeCustomerTab2 === "Memberships" ? "No memberships yet" : "No people added";
-  const sub = activeCustomerTab2 === "Customers" ? "Customers are grouped from the orders recorded for this business. Customer email and profile details are private under current access rules." : activeCustomerTab2 === "Memberships" ? "Member access is shown from active and past product entitlements." : "Team invitations are not available yet.";
-  const headers = activeCustomerTab2 === "Customers" ? ["Customer", "Email", "Status", "Country", "Total spend", "Joined at", "Last accessed", "Contact"] : activeCustomerTab2 === "Memberships" ? ["Member", "Email", "Plan", "Status", "Price", "Started", "Access"] : ["Person", "Email", "Role", "Status", "Added"];
-  return `${businessHeading2("RELATIONSHIPS", "Customers", "View buyers and membership access recorded by Cohort.")}<div class="customer-tabs" role="tablist">${["Customers", "Memberships", "People"].map((tab) => `<button type="button" role="tab" aria-selected="${activeCustomerTab2 === tab}" class="${activeCustomerTab2 === tab ? "selected" : ""}" data-customer-tab="${tab}">${tab}</button>`).join("")}</div><div class="customer-page-title"><h2>${activeCustomerTab2}</h2></div><div class="customer-toolbar"><label class="customer-search"><span>&#9906;</span><input id="business-customer-search" placeholder="Search by customer or member ID" aria-label="Search ${activeCustomerTab2.toLowerCase()}"></label><select id="customer-status-filter"><option value="all">Status</option><option>Joined</option><option>Active</option><option>Pending</option><option>Expired</option><option>Revoked</option></select><select id="customer-date-filter"><option value="joined">Date joined</option><option value="oldest">Oldest first</option><option value="newest" selected>Newest first</option></select><span class="toolbar-spacer"></span><button class="portal-action" type="button" data-customer-export>Export</button><button class="portal-action" type="button" data-customer-settings aria-label="Customer table settings">&#9881;</button></div><div class="customer-table-wrap"><table class="customer-table"><thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${list.map((person) => `<tr data-customer-date="${escapeHTML2(person.joinedAt || person.startedAt || "")}"><td><b>${escapeHTML2(person.name)}</b>${person.isDemo ? '<small class="demo-record-label">DEMO DATA</small>' : ""}</td><td>${escapeHTML2(person.email)}</td><td><span class="customer-status-pill">${escapeHTML2(person.status)}</span></td>${activeCustomerTab2 === "Customers" ? `<td>${escapeHTML2(person.country)}</td><td>&#8377;${Number(person.totalSpend).toLocaleString("en-IN")}</td><td>${escapeHTML2(new Date(person.joinedAt).toLocaleDateString("en-IN"))}</td><td>\u2014</td><td>\u2014</td>` : activeCustomerTab2 === "Memberships" ? `<td>${escapeHTML2(person.plan)}</td><td>${escapeHTML2(person.status)}</td><td>&#8377;${Number(person.price).toLocaleString("en-IN")}</td><td>${escapeHTML2(person.startedAt ? new Date(person.startedAt).toLocaleDateString("en-IN") : "\u2014")}</td><td>${escapeHTML2(person.renewsAt === "\u2014" || !person.renewsAt ? "\u2014" : new Date(person.renewsAt).toLocaleDateString("en-IN"))}${person.status === "active" ? `<button type="button" class="access-revoke-button" data-access-revoke="${escapeHTML2(person.id)}">Revoke access</button>` : ""}</td>` : `<td>\u2014</td><td>\u2014</td><td>\u2014</td>`}</tr>`).join("")}</tbody></table>${list.length ? "" : `<div class="customer-empty"><span>&#9675;</span><b>${empty}</b><p>${sub}</p>${activeCustomerTab2 === "Customers" ? '<a class="text-link" href="#business/products">View products &rarr;</a>' : ""}</div>`}</div>`;
+  const sub = activeCustomerTab2 === "Customers" ? "Buyers from your orders appear here. Keep private notes and tags to remember what matters." : activeCustomerTab2 === "Memberships" ? "Member access is shown from active and past product entitlements." : "Team invitations are not available yet.";
+  const headers = activeCustomerTab2 === "Customers" ? ["Customer", "Email", "Tags", "Status", "Country", "Total spend", "Joined at", "Last accessed", "CRM"] : activeCustomerTab2 === "Memberships" ? ["Member", "Email", "Plan", "Status", "Price", "Started", "Access"] : ["Person", "Email", "Role", "Status", "Added"];
+  return `${businessHeading2("RELATIONSHIPS", "Customers", "Keep track of buyers, membership access, and the follow-up each person needs.")}
+    <div class="customer-tabs" role="tablist" aria-label="Business relationships">${["Customers", "Memberships", "People"].map((tab) => `<button type="button" role="tab" aria-selected="${activeCustomerTab2 === tab}" class="${activeCustomerTab2 === tab ? "selected" : ""}" data-customer-tab="${tab}">${tab}</button>`).join("")}</div>
+    <div class="customer-page-title"><div><h2>${activeCustomerTab2}</h2><p>${activeCustomerTab2 === "Customers" ? `${customers.length} ${customers.length === 1 ? "buyer" : "buyers"} across your business` : activeCustomerTab2 === "Memberships" ? `${memberships.length} membership records` : "Invite teammates to help manage your business"}</p></div></div>
+    <div class="customer-toolbar">
+      <label class="customer-search"><span aria-hidden="true">\u2315</span><input id="business-customer-search" placeholder="Search by name, customer ID, or tag" aria-label="Search ${activeCustomerTab2.toLowerCase()}"></label>
+      <select id="customer-status-filter" aria-label="Filter by status"><option value="all">All statuses</option><option>Joined</option><option>Active</option><option>Order pending</option><option>Expired</option><option>Revoked</option></select>
+      ${activeCustomerTab2 === "Customers" ? '<select id="customer-segment-filter" aria-label="Filter customer segment"><option value="all">All customers</option><option value="tagged">Has tags</option><option value="noted">Has a note</option><option value="demo">Demo data</option></select>' : ""}
+      <select id="customer-date-filter" aria-label="Sort by join date"><option value="newest" selected>Newest first</option><option value="oldest">Oldest first</option></select>
+      <span class="toolbar-spacer"></span><button class="portal-action" type="button" data-customer-export>Export</button>
+    </div>
+    <div class="customer-table-wrap"><table class="customer-table"><thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead><tbody>
+      ${list.map((person) => {
+    const crm = person.relationship;
+    const tags = crm?.tags || [];
+    const date = person.joinedAt || person.startedAt;
+    const dateLabel = date ? new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "\u2014";
+    const crmButton = `<button class="customer-crm-edit" type="button" data-customer-crm="${escapeHTML2(person.buyerId)}" aria-label="Edit notes and tags for ${escapeHTML2(person.name)}">${crm?.note || tags.length ? "Edit details" : "+ Add details"}</button>`;
+    return `<tr data-customer-date="${escapeHTML2(date || "")}" data-customer-tags="${escapeHTML2(tags.join(" ").toLowerCase())}" data-customer-note="${escapeHTML2(crm?.note || "")}" data-customer-demo="${person.isDemo ? "true" : "false"}">
+          <td><b>${escapeHTML2(person.name)}</b>${person.isDemo ? '<small class="demo-record-label">DEMO DATA</small>' : ""}</td>
+          <td>${escapeHTML2(person.email)}</td>
+          ${activeCustomerTab2 === "Customers" ? `<td class="customer-tag-cell">${tags.length ? tags.map((tag) => `<span class="customer-tag">${escapeHTML2(tag)}</span>`).join("") : '<span class="customer-no-tags">\u2014</span>'}</td>` : ""}
+          <td><span class="customer-status-pill">${escapeHTML2(person.status)}</span></td>
+          ${activeCustomerTab2 === "Customers" ? `<td>${escapeHTML2(person.country)}</td><td>\u20B9${Number(person.totalSpend).toLocaleString("en-IN")}</td><td>${dateLabel}</td><td>\u2014</td><td>${crmButton}</td>` : activeCustomerTab2 === "Memberships" ? `<td>${escapeHTML2(person.plan)}</td><td>${escapeHTML2(person.status)}</td><td>\u20B9${Number(person.price).toLocaleString("en-IN")}</td><td>${dateLabel}</td><td>${person.renewsAt ? new Date(person.renewsAt).toLocaleDateString("en-IN") : "No expiry"}</td>` : "<td>\u2014</td><td>\u2014</td><td>\u2014</td>"}
+        </tr>`;
+  }).join("")}
+    </tbody></table>${list.length ? "" : `<div class="customer-empty"><span>\u25EF</span><b>${empty}</b><p>${sub}</p>${activeCustomerTab2 === "Customers" ? '<a class="text-link" href="#business/products">View products \u2192</a>' : ""}</div>`}</div>`;
+}
+function customerCrmDialog(businessId, customerId, personName, relationship = {}) {
+  const tags = Array.isArray(relationship.tags) ? relationship.tags.join(", ") : "";
+  const updated = relationship.updated_at ? `Last updated ${new Date(relationship.updated_at).toLocaleDateString("en-IN")}` : "Only you and your business team can see these details.";
+  const backdrop = document.createElement("div");
+  backdrop.className = "portal-modal-backdrop customer-crm-backdrop";
+  backdrop.innerHTML = `<section class="portal-modal customer-crm-modal" role="dialog" aria-modal="true" aria-labelledby="customer-crm-title">
+    <button class="portal-modal-close" type="button" data-close-modal aria-label="Close">\xD7</button>
+    <span class="portal-kicker">PRIVATE CUSTOMER RECORD</span><h2 id="customer-crm-title">${escapeHTML2(personName)}</h2>
+    <p class="customer-crm-intro">Add context for your next conversation. These notes and tags are private to your business.</p>
+    <form id="customer-crm-form" data-business-id="${escapeHTML2(businessId)}" data-customer-id="${escapeHTML2(customerId)}">
+      <label class="form-field"><span>Tags <small>Up to 8, comma separated</small></span><input name="tags" maxlength="220" value="${escapeHTML2(tags)}" placeholder="e.g. VIP, renewal, course cohort"></label>
+      <label class="form-field"><span>Internal note</span><textarea name="note" rows="6" maxlength="2000" placeholder="Remember goals, support context, or the next action\u2026">${escapeHTML2(relationship.note || "")}</textarea><small class="customer-crm-updated">${updated}</small></label>
+      <div class="customer-crm-footer"><button class="portal-action" type="button" data-close-modal>Cancel</button><button class="button button-primary" type="submit">Save details</button></div>
+      <p class="auth-message" role="status"></p>
+    </form>
+  </section>`;
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop) backdrop.remove();
+  });
+  document.body.append(backdrop);
+  backdrop.querySelector('[name="tags"]')?.focus();
 }
 
 // src/portal/business/access.js
@@ -21355,15 +21434,16 @@ function renderBusinessPage(route) {
     const note = document.querySelector("#analytics-period-note");
     if (note) note.textContent = period.value === "Today" ? "Showing today" : `Showing the last ${period.value}`;
   });
-  const customerSearch = document.querySelector("#business-customer-search"), customerStatus = document.querySelector("#customer-status-filter"), customerDate = document.querySelector("#customer-date-filter");
+  const customerSearch = document.querySelector("#business-customer-search"), customerStatus = document.querySelector("#customer-status-filter"), customerSegment = document.querySelector("#customer-segment-filter"), customerDate = document.querySelector("#customer-date-filter");
   const filterCustomers = () => {
     document.querySelectorAll(".customer-table tbody tr").forEach((row) => {
-      const query = (customerSearch?.value || "").toLowerCase(), status2 = customerStatus?.value || "all";
-      row.hidden = !row.textContent.toLowerCase().includes(query) || status2 !== "all" && !row.textContent.toLowerCase().includes(status2.toLowerCase());
+      const query = (customerSearch?.value || "").toLowerCase().trim(), status2 = customerStatus?.value || "all", segment = customerSegment?.value || "all", text = `${row.textContent} ${row.dataset.customerTags || ""} ${row.dataset.customerNote || ""}`.toLowerCase(), hasNote = !!row.dataset.customerNote?.trim(), hasTags = !!row.dataset.customerTags?.trim(), demo = row.dataset.customerDemo === "true";
+      row.hidden = !text.includes(query) || status2 !== "all" && !row.textContent.toLowerCase().includes(status2.toLowerCase()) || segment === "tagged" && !hasTags || segment === "noted" && !hasNote || segment === "demo" && !demo;
     });
   };
   customerSearch?.addEventListener("input", filterCustomers);
   customerStatus?.addEventListener("change", filterCustomers);
+  customerSegment?.addEventListener("change", filterCustomers);
   customerDate?.addEventListener("change", () => {
     const body = document.querySelector(".customer-table tbody"), rows = [...body?.rows || []], direction = customerDate.value === "oldest" ? 1 : -1;
     rows.sort((a, b) => direction * (new Date(a.dataset.customerDate || 0) - new Date(b.dataset.customerDate || 0)));
@@ -21492,7 +21572,7 @@ document.addEventListener("submit", async (event) => {
   const form = event.target;
   if (!(form instanceof HTMLFormElement)) return;
   const communityForm = form.matches("[data-community-post-form], [data-community-reply-form]");
-  if (!communityForm && !["auth-form", "edit-profile-form", "business-form", "portal-search-form", "reset-request-form", "new-password-form", "business-product-form", "access-code-form", "redeem-access-code-form"].includes(form.id)) return;
+  if (!communityForm && !["auth-form", "edit-profile-form", "business-form", "portal-search-form", "reset-request-form", "new-password-form", "business-product-form", "access-code-form", "redeem-access-code-form", "customer-crm-form"].includes(form.id)) return;
   event.preventDefault();
   if (!supabase) return status(initError || "Supabase is not configured.", true);
   const data = new FormData(form);
@@ -21506,7 +21586,26 @@ document.addEventListener("submit", async (event) => {
     setProductSaveState(form, "Saving product details\xE2\u20AC\xA6");
   }
   try {
-    if (form.id === "auth-form") {
+    if (form.id === "customer-crm-form") {
+      const businessId = form.dataset.businessId, customerId = form.dataset.customerId;
+      const note = String(data.get("note") || "").trim();
+      const tags = [...new Set(String(data.get("tags") || "").split(",").map((tag) => tag.trim()).filter(Boolean))];
+      if (tags.length > 8) throw new Error("Add up to 8 tags per customer.");
+      if (tags.some((tag) => tag.length > 24)) throw new Error("Each tag must be 24 characters or fewer.");
+      if (note.length > 2e3) throw new Error("Keep notes under 2,000 characters.");
+      const query = supabase.from("customer_relationships");
+      if (!note && !tags.length) {
+        const { error } = await query.delete().eq("business_id", businessId).eq("customer_id", customerId);
+        if (error) throw error;
+      } else {
+        const { error } = await query.upsert({ business_id: businessId, customer_id: customerId, tags, note, updated_at: (/* @__PURE__ */ new Date()).toISOString() }, { onConflict: "business_id,customer_id" });
+        if (error) throw error;
+      }
+      await loadWorkspaceData(supabase, currentUser);
+      document.querySelector(".customer-crm-backdrop")?.remove();
+      renderAuthRoute();
+      portalToast(note || tags.length ? "Customer details saved." : "Customer notes and tags cleared.");
+    } else if (form.id === "auth-form") {
       const email = String(data.get("email") || "").trim();
       const password = String(data.get("password") || "");
       if (form.dataset.mode.startsWith("signup")) {
@@ -21808,7 +21907,7 @@ document.addEventListener("click", async (event) => {
 document.addEventListener("click", async (event) => {
   const menu = document.querySelector("#portal-account-menu");
   if (menu && !event.target.closest(".portal-top-actions")) menu.hidden = true;
-  const target = event.target.closest("[data-menu-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-settings], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete]");
+  const target = event.target.closest("[data-menu-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-crm], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete]");
   if (!target) return;
   event.preventDefault();
   if (target.matches("[data-customer-download]")) {
@@ -21876,6 +21975,11 @@ document.addEventListener("click", async (event) => {
     }
     return;
   }
+  if (target.matches("[data-customer-crm]")) {
+    const customerId = target.dataset.customerCrm, order = workspace.orders.find((item) => item.buyer_id === customerId), demo = order?.is_demo, displayName3 = demo ? order.answers?.demo_customer_name || `Demo customer ${customerId.slice(0, 6)}` : `Customer ${customerId.slice(0, 6)}`, relationship = workspace.customerRelationships.find((item) => item.customer_id === customerId) || {};
+    customerCrmDialog(getBusiness()?.id, customerId, displayName3, relationship);
+    return;
+  }
   if (target.matches("[data-copy-link]")) {
     await navigator.clipboard.writeText(`${location.origin}${target.dataset.copyLink}`);
     portalToast("Product link copied.");
@@ -21924,13 +22028,13 @@ document.addEventListener("click", async (event) => {
     return;
   }
   if (target.matches("[data-customer-export]")) {
-    const headers = activeCustomerTab === "Customers" ? ["Customer ID", "Email", "Status", "Country", "Total spend (INR)", "Joined at", "Last accessed"] : activeCustomerTab === "Memberships" ? ["Member ID", "Email", "Plan", "Status", "Price (INR)", "Started", "Renews"] : ["Person", "Email", "Role", "Status", "Added"];
+    const headers = activeCustomerTab === "Customers" ? ["Customer ID", "Email", "Status", "Country", "Total spend (INR)", "Joined at", "Tags"] : ["Member ID", "Email", "Plan", "Status", "Price (INR)", "Started", "Renews"];
     let rows = [];
     if (activeCustomerTab === "Customers") {
       const byBuyer = /* @__PURE__ */ new Map();
       for (const order of workspace.orders) {
         if (!order.buyer_id) continue;
-        const row = byBuyer.get(order.buyer_id) || [order.buyer_id.slice(0, 8), "Private to customer", order.status === "paid" ? "Joined" : "Order pending", "\xE2\u20AC\u201D", 0, order.created_at, "\xE2\u20AC\u201D"];
+        const relation = workspace.customerRelationships.find((item) => item.customer_id === order.buyer_id), row = byBuyer.get(order.buyer_id) || [order.buyer_id.slice(0, 8), order.is_demo ? order.answers?.demo_customer_email || "demo@cohort.invalid" : "Private to customer", order.status === "paid" ? "Joined" : "Order pending", order.is_demo ? order.answers?.demo_country || "India" : "\u2014", 0, order.created_at, (relation?.tags || []).join("; ")];
         if (order.status === "paid") row[4] += moneyFromPaise(order.amount_paise);
         byBuyer.set(order.buyer_id, row);
       }
@@ -21942,10 +22046,6 @@ document.addEventListener("click", async (event) => {
     link.click();
     URL.revokeObjectURL(url);
     portalToast(`${activeCustomerTab} exported.`);
-    return;
-  }
-  if (target.matches("[data-customer-settings]")) {
-    portalToast("Customer columns use the default Cohort layout.");
     return;
   }
   if (target.matches("[data-pricing-edit]")) {
