@@ -20811,7 +20811,13 @@ var workspace = {
   memberships: [],
   catalog: [],
   accessCodes: [],
-  customerRelationships: []
+  customerRelationships: [],
+  customerBlocks: [],
+  customerAccess: [],
+  customerProgress: [],
+  customerActivity: [],
+  resourceProgress: [],
+  personalBlocks: []
 };
 var initialsFor = (value) => String(value || "C").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 var moneyFromPaise = (value) => Number(value || 0) / 100;
@@ -20862,44 +20868,87 @@ function fromProduct(row) {
 }
 async function loadWorkspaceData(supabase2, user) {
   if (!supabase2) {
-    Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], catalog: [], accessCodes: [], customerRelationships: [] });
+    Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], catalog: [], accessCodes: [], customerRelationships: [], customerBlocks: [], customerAccess: [], customerProgress: [], customerActivity: [], resourceProgress: [], personalBlocks: [] });
     return workspace;
   }
-  if (!user) Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], accessCodes: [], customerRelationships: [] });
+  if (!user) Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], accessCodes: [], customerRelationships: [], customerBlocks: [], customerAccess: [], customerProgress: [], customerActivity: [], resourceProgress: [], personalBlocks: [] });
   if (user) {
-    const [{ data: profile }, { data: business, error: businessError }, { data: purchases, error: purchasesError }, { data: memberships, error: membershipsError }] = await Promise.all([
+    const [{ data: profile }, { data: business, error: businessError }, { data: purchases, error: purchasesError }, { data: memberships, error: membershipsError }, { data: accessOverrides, error: accessOverridesError }, { data: personalBlocks, error: personalBlocksError }] = await Promise.all([
       supabase2.from("profiles").select("*").eq("id", user.id).maybeSingle(),
       supabase2.from("businesses").select("*, products(*, prices(*), product_deliverables(*))").eq("owner_id", user.id).maybeSingle(),
       supabase2.from("orders").select("id,order_number,amount_paise,currency,status,created_at,paid_at,is_demo,products(name,slug),businesses(name,handle)").eq("buyer_id", user.id).order("created_at", { ascending: false }),
-      supabase2.from("entitlements").select("id,business_id,product_id,status,starts_at,ends_at,products(name,slug,type,headline,product_deliverables(id,title,kind,storage_path,url)),businesses(name,handle)").eq("buyer_id", user.id).order("created_at", { ascending: false })
+      supabase2.from("entitlements").select("id,business_id,product_id,status,starts_at,ends_at,products(name,slug,type,headline,product_deliverables(id,title,kind,storage_path,url)),businesses(name,handle)").eq("buyer_id", user.id).order("created_at", { ascending: false }),
+      supabase2.from("customer_product_access").select("id,business_id,product_id,resource_id,effect,products(name,slug,type,headline,product_deliverables(id,title,kind,storage_path,url)),businesses(name,handle)").eq("customer_id", user.id).eq("effect", "grant"),
+      supabase2.from("business_customer_blocks").select("id,business_id,reason,created_at").eq("customer_id", user.id)
     ]);
     if (businessError) throw businessError;
     if (purchasesError) throw purchasesError;
     if (membershipsError) throw membershipsError;
+    if (accessOverridesError) throw accessOverridesError;
+    if (personalBlocksError) throw personalBlocksError;
     workspace.profile = profile || null;
     workspace.business = business ? { ...business, products: (business.products || []).map(fromProduct), website: business.website || "" } : null;
     workspace.purchases = purchases || [];
-    workspace.memberships = memberships || [];
+    const grantedProducts = /* @__PURE__ */ new Map();
+    for (const row of accessOverrides || []) {
+      const product = row.products || {};
+      const existing = grantedProducts.get(row.product_id);
+      if (!existing || !row.resource_id) grantedProducts.set(row.product_id, {
+        id: `access-${row.id}`,
+        business_id: row.business_id,
+        product_id: row.product_id,
+        status: "active",
+        starts_at: null,
+        ends_at: null,
+        access_override: true,
+        products: product,
+        businesses: row.businesses || {}
+      });
+    }
+    const overrideMemberships = [...grantedProducts.values()];
+    workspace.personalBlocks = personalBlocks || [];
+    const businessBlocks = new Set(workspace.personalBlocks.map((row) => row.business_id));
+    workspace.memberships = [...memberships || [], ...overrideMemberships.filter((override) => !(memberships || []).some((item) => item.product_id === override.product_id && item.status === "active"))].map((item) => businessBlocks.has(item.business_id) ? { ...item, status: "blocked" } : item);
     if (workspace.business) {
-      const [{ data: orders, error }, { data: entitlements, error: entitlementsError }, { data: accessCodes, error: accessCodesError }, { data: customerRelationships, error: customerRelationshipsError }] = await Promise.all([
+      const [{ data: orders, error }, { data: entitlements, error: entitlementsError }, { data: accessCodes, error: accessCodesError }, { data: customerRelationships, error: customerRelationshipsError }, { data: customerBlocks, error: customerBlocksError }, { data: customerAccess, error: customerAccessError }, { data: customerProgress, error: customerProgressError }, { data: customerActivity, error: customerActivityError }, { data: resourceProgress, error: resourceProgressError }] = await Promise.all([
         supabase2.from("orders").select("id,order_number,buyer_id,business_id,product_id,amount_paise,currency,status,created_at,paid_at,is_demo,answers,products(name,slug)").eq("business_id", workspace.business.id).order("created_at", { ascending: false }),
         supabase2.from("entitlements").select("id,buyer_id,business_id,product_id,status,starts_at,ends_at,products(name,prices(amount_paise,cadence))").eq("business_id", workspace.business.id).order("created_at", { ascending: false }),
         supabase2.from("product_access_codes").select("id,product_id,business_id,label,code_hint,max_redemptions,redemption_count,access_days,expires_at,disabled_at,created_at,products(name)").eq("business_id", workspace.business.id).order("created_at", { ascending: false }),
-        supabase2.from("customer_relationships").select("business_id,customer_id,tags,note,updated_at").eq("business_id", workspace.business.id)
+        supabase2.from("customer_relationships").select("business_id,customer_id,tags,note,updated_at").eq("business_id", workspace.business.id),
+        supabase2.from("business_customer_blocks").select("id,business_id,customer_id,reason,created_at").eq("business_id", workspace.business.id),
+        supabase2.from("customer_product_access").select("id,business_id,customer_id,product_id,resource_id,effect,reason,created_at,updated_at").eq("business_id", workspace.business.id),
+        supabase2.from("member_resource_progress").select("id,business_id,customer_id,product_id,resource_id,completed_at,updated_at").eq("business_id", workspace.business.id),
+        supabase2.from("community_comments").select("id,author_id,body,created_at,community_posts!inner(product_id,products!inner(name,business_id))").eq("community_posts.products.business_id", workspace.business.id).order("created_at", { ascending: false }).limit(500),
+        supabase2.from("member_resource_progress").select("id,business_id,customer_id,product_id,resource_id,completed_at,updated_at").eq("customer_id", user.id)
       ]);
       if (error) throw error;
       if (entitlementsError) throw entitlementsError;
       if (accessCodesError) throw accessCodesError;
       if (customerRelationshipsError) throw customerRelationshipsError;
+      if (customerBlocksError) throw customerBlocksError;
+      if (customerAccessError) throw customerAccessError;
+      if (customerProgressError) throw customerProgressError;
+      if (customerActivityError) throw customerActivityError;
+      if (resourceProgressError) throw resourceProgressError;
       workspace.orders = orders || [];
       workspace.entitlements = entitlements || [];
       workspace.accessCodes = accessCodes || [];
       workspace.customerRelationships = customerRelationships || [];
+      workspace.customerBlocks = customerBlocks || [];
+      workspace.customerAccess = customerAccess || [];
+      workspace.customerProgress = customerProgress || [];
+      workspace.customerActivity = customerActivity || [];
+      workspace.resourceProgress = resourceProgress || [];
     } else {
       workspace.orders = [];
       workspace.entitlements = [];
       workspace.accessCodes = [];
       workspace.customerRelationships = [];
+      workspace.customerBlocks = [];
+      workspace.customerAccess = [];
+      workspace.customerProgress = [];
+      workspace.customerActivity = [];
+      workspace.resourceProgress = [];
     }
   }
   await loadPublicCatalog(supabase2);
@@ -20978,6 +21027,7 @@ function businessHeading2(kicker, title, copy = "", action = "") {
 }
 function businessCustomers(business, activeCustomerTab2) {
   const relationships = new Map(workspace.customerRelationships.map((row) => [row.customer_id, row]));
+  const blockedCustomers = new Set(workspace.customerBlocks.map((row) => row.customer_id));
   const buyers = /* @__PURE__ */ new Map();
   for (const order of workspace.orders) {
     const key = order.buyer_id;
@@ -21002,6 +21052,9 @@ function businessCustomers(business, activeCustomerTab2) {
     buyers.set(key, row);
   }
   const customers = [...buyers.values()].sort((a, b) => new Date(b.joinedAt) - new Date(a.joinedAt));
+  customers.forEach((row) => {
+    if (blockedCustomers.has(row.buyerId)) row.status = "Banned";
+  });
   const memberships = workspace.entitlements.map((item) => {
     const demoOrder = workspace.orders.find((order) => order.buyer_id === item.buyer_id && order.is_demo);
     const answers = demoOrder?.answers || {};
@@ -21018,6 +21071,9 @@ function businessCustomers(business, activeCustomerTab2) {
       isDemo: !!demoOrder
     };
   });
+  memberships.forEach((row) => {
+    if (blockedCustomers.has(row.buyerId)) row.status = "Banned";
+  });
   const list = activeCustomerTab2 === "Customers" ? customers : activeCustomerTab2 === "Memberships" ? memberships : [];
   const empty = activeCustomerTab2 === "Customers" ? "No customers yet" : activeCustomerTab2 === "Memberships" ? "No memberships yet" : "No people added";
   const sub = activeCustomerTab2 === "Customers" ? "Buyers from your orders appear here. Keep private notes and tags to remember what matters." : activeCustomerTab2 === "Memberships" ? "Member access is shown from active and past product entitlements." : "Team invitations are not available yet.";
@@ -21027,7 +21083,7 @@ function businessCustomers(business, activeCustomerTab2) {
     <div class="customer-page-title"><div><h2>${activeCustomerTab2}</h2><p>${activeCustomerTab2 === "Customers" ? `${customers.length} ${customers.length === 1 ? "buyer" : "buyers"} across your business` : activeCustomerTab2 === "Memberships" ? `${memberships.length} membership records` : "Invite teammates to help manage your business"}</p></div></div>
     <div class="customer-toolbar">
       <label class="customer-search"><span aria-hidden="true">\u2315</span><input id="business-customer-search" placeholder="Search by name, customer ID, or tag" aria-label="Search ${activeCustomerTab2.toLowerCase()}"></label>
-      <select id="customer-status-filter" aria-label="Filter by status"><option value="all">All statuses</option><option>Joined</option><option>Active</option><option>Order pending</option><option>Expired</option><option>Revoked</option></select>
+      <select id="customer-status-filter" aria-label="Filter by status"><option value="all">All statuses</option><option>Joined</option><option>Active</option><option>Order pending</option><option>Expired</option><option>Revoked</option><option>Banned</option></select>
       ${activeCustomerTab2 === "Customers" ? '<select id="customer-segment-filter" aria-label="Filter customer segment"><option value="all">All customers</option><option value="tagged">Has tags</option><option value="noted">Has a note</option><option value="demo">Demo data</option></select>' : ""}
       <select id="customer-date-filter" aria-label="Sort by join date"><option value="newest" selected>Newest first</option><option value="oldest">Oldest first</option></select>
       <span class="toolbar-spacer"></span><button class="portal-action" type="button" data-customer-export>Export</button>
@@ -21038,9 +21094,10 @@ function businessCustomers(business, activeCustomerTab2) {
     const tags = crm?.tags || [];
     const date = person.joinedAt || person.startedAt;
     const dateLabel = date ? new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" }) : "\u2014";
-    const crmButton = `<button class="customer-crm-edit" type="button" data-customer-crm="${escapeHTML2(person.buyerId)}" aria-label="Edit notes and tags for ${escapeHTML2(person.name)}">${crm?.note || tags.length ? "Edit details" : "+ Add details"}</button>`;
+    const profileButton = `<button class="customer-profile-open" type="button" data-customer-open="${escapeHTML2(person.buyerId)}" aria-label="Open customer details for ${escapeHTML2(person.name)}">Open profile <span aria-hidden="true">\u2197</span></button>`;
+    const crmButton = `<button class="customer-crm-edit" type="button" data-customer-crm="${escapeHTML2(person.buyerId)}" aria-label="Edit notes and tags for ${escapeHTML2(person.name)}">${crm?.note || tags.length ? "Edit notes" : "+ Add notes"}</button>`;
     return `<tr data-customer-date="${escapeHTML2(date || "")}" data-customer-tags="${escapeHTML2(tags.join(" ").toLowerCase())}" data-customer-note="${escapeHTML2(crm?.note || "")}" data-customer-demo="${person.isDemo ? "true" : "false"}">
-          <td><b>${escapeHTML2(person.name)}</b>${person.isDemo ? '<small class="demo-record-label">DEMO DATA</small>' : ""}</td>
+          <td><b>${profileButton}</b>${person.isDemo ? '<small class="demo-record-label">DEMO DATA</small>' : ""}</td>
           <td>${escapeHTML2(person.email)}</td>
           ${activeCustomerTab2 === "Customers" ? `<td class="customer-tag-cell">${tags.length ? tags.map((tag) => `<span class="customer-tag">${escapeHTML2(tag)}</span>`).join("") : '<span class="customer-no-tags">\u2014</span>'}</td>` : ""}
           <td><span class="customer-status-pill">${escapeHTML2(person.status)}</span></td>
@@ -21070,6 +21127,72 @@ function customerCrmDialog(businessId, customerId, personName, relationship = {}
   });
   document.body.append(backdrop);
   backdrop.querySelector('[name="tags"]')?.focus();
+}
+function when(value) {
+  return value ? new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "Not recorded";
+}
+function customerMemberDialog(business, customerId, personName) {
+  const orders = workspace.orders.filter((row) => row.buyer_id === customerId).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const entitlements = workspace.entitlements.filter((row) => row.buyer_id === customerId);
+  const overrides = workspace.customerAccess.filter((row) => row.customer_id === customerId);
+  const block = workspace.customerBlocks.find((row) => row.customer_id === customerId);
+  const progress = workspace.customerProgress.filter((row) => row.customer_id === customerId);
+  const replies = workspace.customerActivity.filter((row) => row.author_id === customerId);
+  const products = business.products || [];
+  const names = new Map(products.map((row) => [row.id, row.name]));
+  const resources = new Map(products.flatMap((product) => (product.deliverables || []).map((file) => [file.id, { ...file, productId: product.id, productName: product.name }])));
+  const blockedProductIds = new Set(overrides.filter((row) => !row.resource_id && row.effect === "revoke").map((row) => row.product_id));
+  const grantedProductIds = new Set(overrides.filter((row) => !row.resource_id && row.effect === "grant").map((row) => row.product_id));
+  const activeEntitlementIds = new Set(entitlements.filter((row) => row.status === "active" && (!row.starts_at || new Date(row.starts_at) <= /* @__PURE__ */ new Date()) && (!row.ends_at || new Date(row.ends_at) > /* @__PURE__ */ new Date())).map((row) => row.product_id));
+  const resourceOverrides = new Map(overrides.filter((row) => row.resource_id).map((row) => [row.resource_id, row.effect]));
+  const eligibleResourceIds = /* @__PURE__ */ new Set();
+  for (const file of resources.values()) {
+    if (blockedProductIds.has(file.productId)) continue;
+    if (activeEntitlementIds.has(file.productId) || grantedProductIds.has(file.productId)) {
+      if (resourceOverrides.get(file.id) !== "revoke") eligibleResourceIds.add(file.id);
+    } else if (resourceOverrides.get(file.id) === "grant") eligibleResourceIds.add(file.id);
+  }
+  const completed = progress.filter((row) => row.completed_at && eligibleResourceIds.has(row.resource_id));
+  const activityTimes = [...completed.map((row) => row.completed_at), ...replies.map((row) => row.created_at)].filter(Boolean).sort((a, b) => new Date(b) - new Date(a));
+  const lastActivity = activityTimes[0];
+  const resourceTotal = eligibleResourceIds.size;
+  const firstOrder = orders.length ? orders.reduce((earliest, row) => new Date(row.created_at) < new Date(earliest.created_at) ? row : earliest, orders[0]) : null;
+  const customerEmail = orders.find((row) => row.is_demo)?.answers?.demo_customer_email || "Private to customer";
+  const paid = orders.filter((row) => row.status === "paid");
+  const spend = paid.reduce((sum, row) => sum + moneyFromPaise(row.amount_paise), 0);
+  const titleForScope = (row) => row.resource_id ? resources.get(row.resource_id)?.title || "Resource" : names.get(row.product_id) || "Program";
+  const accessRows = entitlements.map((row) => `<div class="member-access-row"><span><b>${escapeHTML2(row.products?.name || "Program")}</b><small>${escapeHTML2(row.status)} \xB7 started ${escapeHTML2(when(row.starts_at))}${row.ends_at ? ` \xB7 ends ${escapeHTML2(when(row.ends_at))}` : ""}</small></span><span class="customer-status-pill ${row.status === "active" ? "is-active" : ""}">${row.status === "active" ? "Purchased" : escapeHTML2(row.status)}</span>${row.status === "active" ? `<button type="button" class="portal-action" data-member-entitlement-revoke="${escapeHTML2(row.id)}">Revoke access</button>` : `<button type="button" class="portal-action" data-member-entitlement-restore="${escapeHTML2(row.id)}">Restore access</button>`}</div>`).join("");
+  const overrideRows = overrides.map((row) => `<div class="member-access-row"><span><b>${escapeHTML2(titleForScope(row))}</b><small>${row.effect === "grant" ? "Creator grant" : "Creator restriction"}${row.reason ? ` \xB7 ${escapeHTML2(row.reason)}` : ""}</small></span><span class="customer-status-pill ${row.effect === "grant" ? "is-active" : ""}">${row.effect === "grant" ? "Granted" : "Restricted"}</span><button type="button" class="portal-action" data-member-access-reset="${escapeHTML2(row.id)}">Remove override</button></div>`).join("");
+  const options = products.map((product) => `<option value="${escapeHTML2(product.id)}">${escapeHTML2(product.name)}</option>`).join("");
+  const resourceOptions = products.flatMap((product) => (product.deliverables || []).map((file) => `<option value="${escapeHTML2(product.id)}::${escapeHTML2(file.id)}">${escapeHTML2(product.name)} \xB7 ${escapeHTML2(file.title || "Untitled resource")}</option>`)).join("");
+  const historyRows = orders.length ? orders.map((row) => `<div class="member-history-row"><span><b>${escapeHTML2(row.products?.name || "Digital product")}</b><small>${escapeHTML2(row.order_number || row.id.slice(0, 8))} \xB7 ${escapeHTML2(when(row.created_at))}</small></span><span>${row.status === "paid" ? "\u20B9" + moneyFromPaise(row.amount_paise).toLocaleString("en-IN") : escapeHTML2(row.status)}</span></div>`).join("") : '<p class="customer-empty-note">No orders recorded for this customer.</p>';
+  const activityRows = [...completed.map((row) => ({ date: row.completed_at, label: `Marked complete \xB7 ${resources.get(row.resource_id)?.title || "Resource"}`, product: names.get(row.product_id) })), ...replies.map((row) => ({ date: row.created_at, label: "Community reply", product: row.community_posts?.products?.name }))].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 12).map((row) => `<div class="member-history-row"><span><b>${escapeHTML2(row.label)}</b><small>${escapeHTML2(row.product || "Program")}</small></span><time>${escapeHTML2(when(row.date))}</time></div>`).join("") || '<p class="customer-empty-note">No learning or community activity has been recorded yet.</p>';
+  const backdrop = document.createElement("div");
+  backdrop.className = "portal-modal-backdrop customer-member-backdrop";
+  backdrop.innerHTML = `<section class="portal-modal customer-member-modal" data-customer-id="${escapeHTML2(customerId)}" role="dialog" aria-modal="true" aria-labelledby="member-title">
+    <button class="portal-modal-close" type="button" data-close-modal aria-label="Close">\xD7</button>
+    <span class="portal-kicker">CUSTOMER WORKSPACE</span><h2 id="member-title">${escapeHTML2(personName)}</h2><p class="customer-member-subtitle">${escapeHTML2(customerEmail)} \xB7 Customer ID ${escapeHTML2(customerId.slice(0, 8))}${firstOrder ? ` \xB7 Joined ${escapeHTML2(new Date(firstOrder.created_at).toLocaleDateString("en-IN"))}` : ""}</p>
+    <div class="customer-member-stats"><div><small>Paid orders</small><b>${paid.length}</b></div><div><small>Total spend</small><b>\u20B9${spend.toLocaleString("en-IN")}</b></div><div><small>Last recorded activity</small><b>${escapeHTML2(lastActivity ? when(lastActivity) : "Not recorded")}</b></div><div><small>Program completion</small><b>${completed.length} of ${resourceTotal} resources</b></div></div>
+    <div class="customer-member-grid"><section class="member-detail-card"><h3>Program access</h3>${accessRows || '<p class="customer-empty-note">No purchased program access found.</p>'}${overrideRows}</section>
+      <section class="member-detail-card"><h3>Manage access</h3><p>Grant or restrict a program or one of its resources. Overrides do not alter orders or revenue.</p>
+        <form id="member-access-form" class="member-access-form" data-member-access-form data-business-id="${escapeHTML2(business.id)}" data-customer-id="${escapeHTML2(customerId)}"><label>Program<select name="product_id" required><option value="">Choose a program</option>${options}</select></label><label>Resource scope <small>Leave blank to manage the full program</small><select name="resource_id"><option value="">Entire program</option>${resourceOptions}</select></label><label>Reason (optional)<input name="reason" maxlength="500" placeholder="Internal context for this change"></label><div><button class="button button-primary" type="submit" name="effect" value="grant">Grant access</button><button class="portal-action" type="submit" name="effect" value="revoke">Restrict access</button></div><p class="auth-message" role="status"></p></form>
+      </section>
+      <section class="member-detail-card"><h3>Member safety</h3>${block ? `<p>This customer is blocked from all programs in this business since ${escapeHTML2(when(block.created_at))}.${block.reason ? ` Reason: ${escapeHTML2(block.reason)}` : ""}</p><button type="button" class="portal-action" data-member-unblock="${escapeHTML2(block.id)}">Restore business access</button>` : `<p>Block this customer from all of your programs and private resources.</p><form id="member-block-form" data-member-block-form data-business-id="${escapeHTML2(business.id)}" data-customer-id="${escapeHTML2(customerId)}"><label>Reason (optional)<input name="reason" maxlength="500" placeholder="e.g. repeated abuse of community rules"></label><button type="submit" class="portal-action danger-action">Block from all programs</button><p class="auth-message" role="status"></p></form>`}</section>
+      <section class="member-detail-card"><h3>Order history</h3><div class="member-history-list">${historyRows}</div></section>
+      <section class="member-detail-card"><h3>Activity timeline</h3><p>Last activity is based on recorded resource completions and community replies.</p><div class="member-history-list">${activityRows}</div></section>
+    </div>
+  </section>`;
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop) backdrop.remove();
+  });
+  document.body.append(backdrop);
+  backdrop.querySelector('[data-member-access-form] select[name="product_id"]')?.addEventListener("change", (event) => {
+    const scope = backdrop.querySelector('[data-member-access-form] select[name="resource_id"]');
+    [...scope.options].forEach((option) => {
+      option.hidden = !!option.value && !option.value.startsWith(`${event.target.value}::`);
+    });
+    scope.value = "";
+  });
 }
 
 // src/portal/business/access.js
@@ -21203,9 +21326,12 @@ function portalSubpage(route, context) {
         const external = typeof file.url === "string" && /^https?:\/\//i.test(file.url);
         const kindLabel = isFile ? "Private download" : file.kind === "link" ? "Hosted content or tool" : file.kind || "Resource";
         const action = isFile ? `<button class="portal-action" type="button" data-customer-download="${escapeHTML7(file.storage_path)}" data-download-name="${escapeHTML7(file.title || "cohort-download")}" ${active2 ? "" : "disabled"}>Download</button>` : external && active2 ? `<a class="portal-action" href="${escapeHTML7(file.url)}" target="_blank" rel="noopener noreferrer">Open resource</a>` : external ? `<span class="portal-action is-disabled" aria-disabled="true">Access ended</span>` : "";
-        return `<div class="library-resource"><span class="library-resource-icon" aria-hidden="true">${isFile ? "?" : "?"}</span><span><b>${escapeHTML7(file.title || "Included resource")}</b><small>${kindLabel}</small></span>${action || (!external && !isFile ? `<p class="library-resource-note">${escapeHTML7(file.url || "")}</p>` : "")}</div>`;
+        const complete = workspace.resourceProgress.find((progress) => progress.resource_id === file.id && progress.completed_at);
+        const progressButton = active2 ? `<button type="button" class="portal-action resource-progress-button ${complete ? "is-complete" : ""}" data-resource-progress="${escapeHTML7(file.id)}" data-product-id="${escapeHTML7(item.product_id)}" data-business-id="${escapeHTML7(item.business_id)}">${complete ? "Completed \u2713" : "Mark complete"}</button>` : "";
+        return `<div class="library-resource"><span class="library-resource-icon" aria-hidden="true">${isFile ? "?" : "?"}</span><span><b>${escapeHTML7(file.title || "Included resource")}</b><small>${kindLabel}</small></span>${action || (!external && !isFile ? `<p class="library-resource-note">${escapeHTML7(file.url || "")}</p>` : "")}${progressButton}</div>`;
       }).join("") : `<div class="portal-empty-state library-empty"><b>No materials added yet</b><p>The creator will add files, hosted content, or tool access here.</p></div>`;
-      return `<article class="portal-panel library-item"><div class="library-item-head"><div><span class="portal-kicker">${escapeHTML7(product.type || "PRODUCT")}</span><h2>${escapeHTML7(product.name || "Cohort product")}</h2><p>By ${escapeHTML7(item.businesses?.name || "Cohort creator")} ? ${escapeHTML7(item.status || "Access")}</p></div><span class="customer-status-pill ${active2 ? "is-active" : ""}">${active2 ? "Access active" : "Access ended"}</span></div>${item.ends_at ? `<small class="library-expiry">Access until ${escapeHTML7(new Date(item.ends_at).toLocaleDateString("en-IN"))}</small>` : ""}<div class="library-resources">${resources}</div><a class="text-link" href="/p/${encodeURIComponent(item.businesses?.handle || "")}/${encodeURIComponent(product.slug || "")}">View product page ?</a></article>`;
+      const accessLabel = item.status === "blocked" ? "Blocked by creator" : active2 ? "Access active" : "Access ended";
+      return `<article class="portal-panel library-item"><div class="library-item-head"><div><span class="portal-kicker">${escapeHTML7(product.type || "PRODUCT")}</span><h2>${escapeHTML7(product.name || "Cohort product")}</h2><p>By ${escapeHTML7(item.businesses?.name || "Cohort creator")} \xB7 ${escapeHTML7(item.status || "Access")}</p></div><span class="customer-status-pill ${active2 ? "is-active" : ""}">${accessLabel}</span></div>${item.ends_at ? `<small class="library-expiry">Access until ${escapeHTML7(new Date(item.ends_at).toLocaleDateString("en-IN"))}</small>` : ""}<div class="library-resources">${resources}</div><a class="text-link" href="/p/${encodeURIComponent(item.businesses?.handle || "")}/${encodeURIComponent(product.slug || "")}">View product page \u2192</a></article>`;
     }).join("")}</div>` : `<section class="portal-panel"><div class="portal-empty-state"><span>?</span><b>Your library is ready when you are</b><p>Use a creator invite code to unlock a beta offer or get direct access to a product.</p><a class="button button-primary" href="#explore">Explore Cohort ?</a></div></section>`;
     return `<div class="portal-page-heading"><span class="portal-kicker">YOUR PURCHASES</span><h1>My library</h1><p>One home for creator resources, courses, memberships, and connected tools you can access.</p></div><section class="portal-panel redeem-access-panel"><div class="redeem-access-copy"><span class="redeem-access-icon" aria-hidden="true">?</span><div><h2>Have an access code?</h2><p>Redeem a private creator invite to add the offer to your library.</p></div></div><form id="redeem-access-code-form"><label class="sr-only" for="redeem-access-code">Access code</label><input id="redeem-access-code" name="access_code" placeholder="Enter your Cohort code" autocomplete="off" autocapitalize="characters" minlength="12" maxlength="64" required><button class="button button-primary" type="submit">Redeem code</button></form><p class="auth-message" id="redeem-access-status" role="status"></p></section>${cards}`;
   }
@@ -21387,6 +21513,10 @@ function portalShell(content, active2 = "profile") {
 var bizSections = [["", [["home", "Home"], ["analytics", "Analytics"], ["products", "Products"], ["payments", "Payments"], ["customers", "Customers"], ["community", "Community"], ["access", "Access"], ["websites", "Websites"]]], ["Grow", [["ads", "Ads"], ["workforce", "Workforce"], ["affiliates", "Affiliates"]]], ["Operations", [["cards", "Cards"], ["support", "Support"], ["more", "More"]]]];
 function getBusiness() {
   return workspace.business;
+}
+function ordersCustomerName(customerId) {
+  const order = workspace.orders.find((item) => item.buyer_id === customerId), demo = order?.is_demo;
+  return demo ? order.answers?.demo_customer_name || `Demo customer ${String(customerId || "").slice(0, 6)}` : `Customer ${String(customerId || "").slice(0, 6)}`;
 }
 function businessShell(content, active2, business) {
   const name = business.name || "Your business";
@@ -21572,7 +21702,7 @@ document.addEventListener("submit", async (event) => {
   const form = event.target;
   if (!(form instanceof HTMLFormElement)) return;
   const communityForm = form.matches("[data-community-post-form], [data-community-reply-form]");
-  if (!communityForm && !["auth-form", "edit-profile-form", "business-form", "portal-search-form", "reset-request-form", "new-password-form", "business-product-form", "access-code-form", "redeem-access-code-form", "customer-crm-form"].includes(form.id)) return;
+  if (!communityForm && !["auth-form", "edit-profile-form", "business-form", "portal-search-form", "reset-request-form", "new-password-form", "business-product-form", "access-code-form", "redeem-access-code-form", "customer-crm-form", "member-access-form", "member-block-form"].includes(form.id)) return;
   event.preventDefault();
   if (!supabase) return status(initError || "Supabase is not configured.", true);
   const data = new FormData(form);
@@ -21586,7 +21716,33 @@ document.addEventListener("submit", async (event) => {
     setProductSaveState(form, "Saving product details\xE2\u20AC\xA6");
   }
   try {
-    if (form.id === "customer-crm-form") {
+    if (form.id === "member-access-form") {
+      const businessId = form.dataset.businessId, customerId = form.dataset.customerId, productId = String(data.get("product_id") || ""), selectedResource = String(data.get("resource_id") || ""), reason = String(data.get("reason") || "").trim(), effect = event.submitter?.value === "revoke" ? "revoke" : "grant";
+      const [resourceProductId, resourceId] = selectedResource ? selectedResource.split("::") : [productId, null];
+      if (!productId || resourceProductId !== productId) throw new Error("Choose a resource from the selected program.");
+      const filters = (query) => {
+        let q = query.eq("business_id", businessId).eq("customer_id", customerId).eq("product_id", productId);
+        q = resourceId ? q.eq("resource_id", resourceId) : q.is("resource_id", null);
+        return q;
+      };
+      const { data: existing, error: lookupError } = await filters(supabase.from("customer_product_access").select("id")).maybeSingle();
+      if (lookupError) throw lookupError;
+      const values = { business_id: businessId, customer_id: customerId, product_id: productId, resource_id: resourceId, effect, reason, created_by: currentUser.id, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      const result = existing ? await supabase.from("customer_product_access").update({ effect, reason, updated_at: values.updated_at }).eq("id", existing.id) : await supabase.from("customer_product_access").insert(values);
+      if (result.error) throw result.error;
+      await loadWorkspaceData(supabase, currentUser);
+      document.querySelector(".customer-member-backdrop")?.remove();
+      const customerName = ordersCustomerName(customerId);
+      customerMemberDialog(getBusiness(), customerId, customerName);
+      portalToast(effect === "grant" ? "Access granted." : "Access restricted.");
+    } else if (form.id === "member-block-form") {
+      const { error } = await supabase.from("business_customer_blocks").insert({ business_id: form.dataset.businessId, customer_id: form.dataset.customerId, reason: String(data.get("reason") || "").trim(), created_by: currentUser.id });
+      if (error) throw error;
+      await loadWorkspaceData(supabase, currentUser);
+      document.querySelector(".customer-member-backdrop")?.remove();
+      customerMemberDialog(getBusiness(), form.dataset.customerId, ordersCustomerName(form.dataset.customerId));
+      portalToast("Customer blocked from this business.");
+    } else if (form.id === "customer-crm-form") {
       const businessId = form.dataset.businessId, customerId = form.dataset.customerId;
       const note = String(data.get("note") || "").trim();
       const tags = [...new Set(String(data.get("tags") || "").split(",").map((tag) => tag.trim()).filter(Boolean))];
@@ -21865,7 +22021,11 @@ document.addEventListener("submit", async (event) => {
     }
   } catch (error) {
     if (form.id === "business-product-form") setProductSaveState(form, error?.message || "Save failed. Please try again.", "error");
-    showError(error);
+    const inline = form.querySelector('[role="status"]');
+    if (inline) {
+      inline.textContent = error?.message || "Something went wrong. Please try again.";
+      inline.classList.add("auth-error");
+    } else showError(error);
   } finally {
     if (form.id === "redeem-access-code-form") form.querySelector('[name="access_code"]')?.removeAttribute("disabled");
     form.dataset.saving = "false";
@@ -21907,7 +22067,7 @@ document.addEventListener("click", async (event) => {
 document.addEventListener("click", async (event) => {
   const menu = document.querySelector("#portal-account-menu");
   if (menu && !event.target.closest(".portal-top-actions")) menu.hidden = true;
-  const target = event.target.closest("[data-menu-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-crm], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete]");
+  const target = event.target.closest("[data-menu-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-crm], [data-customer-open], [data-member-entitlement-revoke], [data-member-entitlement-restore], [data-member-access-reset], [data-member-unblock], [data-resource-progress], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete]");
   if (!target) return;
   event.preventDefault();
   if (target.matches("[data-customer-download]")) {
@@ -21963,9 +22123,16 @@ document.addEventListener("click", async (event) => {
     return;
   }
   if (target.matches("[data-access-revoke]")) {
-    if (!window.confirm("Revoke this member?s access now? They will no longer be able to open private files or resources.")) return;
+    if (!window.confirm("Revoke this member?s access now? Their order record will remain unchanged.")) return;
     try {
-      const { error } = await supabase.from("entitlements").update({ status: "revoked", ends_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", target.dataset.accessRevoke).eq("business_id", getBusiness()?.id);
+      const entitlement = workspace.entitlements.find((row) => row.id === target.dataset.accessRevoke);
+      if (!entitlement) throw new Error("This access record is no longer available.");
+      const { data: override, error: lookupError } = await supabase.from("customer_product_access").select("id").eq("business_id", entitlement.business_id).eq("customer_id", entitlement.buyer_id).eq("product_id", entitlement.product_id).is("resource_id", null).maybeSingle();
+      if (lookupError) throw lookupError;
+      const values = { effect: "revoke", reason: "Creator revoked purchased access", updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      const change = override ? await supabase.from("customer_product_access").update(values).eq("id", override.id) : await supabase.from("customer_product_access").insert({ ...values, business_id: entitlement.business_id, customer_id: entitlement.buyer_id, product_id: entitlement.product_id, resource_id: null, created_by: currentUser.id });
+      if (change.error) throw change.error;
+      const { error } = await supabase.from("entitlements").update({ status: "revoked", ends_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", entitlement.id).eq("business_id", getBusiness()?.id);
       if (error) throw error;
       await loadWorkspaceData(supabase, currentUser);
       renderAuthRoute();
@@ -21978,6 +22145,97 @@ document.addEventListener("click", async (event) => {
   if (target.matches("[data-customer-crm]")) {
     const customerId = target.dataset.customerCrm, order = workspace.orders.find((item) => item.buyer_id === customerId), demo = order?.is_demo, displayName3 = demo ? order.answers?.demo_customer_name || `Demo customer ${customerId.slice(0, 6)}` : `Customer ${customerId.slice(0, 6)}`, relationship = workspace.customerRelationships.find((item) => item.customer_id === customerId) || {};
     customerCrmDialog(getBusiness()?.id, customerId, displayName3, relationship);
+    return;
+  }
+  if (target.matches("[data-customer-open]")) {
+    const customerId = target.dataset.customerOpen;
+    customerMemberDialog(getBusiness(), customerId, ordersCustomerName(customerId));
+    return;
+  }
+  if (target.matches("[data-member-entitlement-revoke]")) {
+    if (!window.confirm("Revoke this purchased program access? The order will remain unchanged.")) return;
+    try {
+      const entitlement = workspace.entitlements.find((row) => row.id === target.dataset.memberEntitlementRevoke);
+      if (!entitlement) throw new Error("This access record is no longer available.");
+      const scoped = supabase.from("customer_product_access").select("id").eq("business_id", entitlement.business_id).eq("customer_id", entitlement.buyer_id).eq("product_id", entitlement.product_id).is("resource_id", null);
+      const { data: override, error: lookupError } = await scoped.maybeSingle();
+      if (lookupError) throw lookupError;
+      const access = { business_id: entitlement.business_id, customer_id: entitlement.buyer_id, product_id: entitlement.product_id, resource_id: null, effect: "revoke", reason: "Creator revoked purchased access", created_by: currentUser.id, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      const changed = override ? await supabase.from("customer_product_access").update({ effect: "revoke", reason: access.reason, updated_at: access.updated_at }).eq("id", override.id) : await supabase.from("customer_product_access").insert(access);
+      if (changed.error) throw changed.error;
+      const { error } = await supabase.from("entitlements").update({ status: "revoked", ends_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", entitlement.id).eq("business_id", getBusiness()?.id);
+      if (error) throw error;
+      await loadWorkspaceData(supabase, currentUser);
+      document.querySelector(".customer-member-backdrop")?.remove();
+      customerMemberDialog(getBusiness(), entitlement.buyer_id, ordersCustomerName(entitlement.buyer_id));
+      portalToast("Program access revoked.");
+    } catch (error) {
+      portalToast(error?.message || "Could not revoke access.");
+    }
+    return;
+  }
+  if (target.matches("[data-member-entitlement-restore]")) {
+    try {
+      const entitlement = workspace.entitlements.find((row) => row.id === target.dataset.memberEntitlementRestore);
+      if (!entitlement) throw new Error("This access record is no longer available.");
+      const { error } = await supabase.from("entitlements").update({ status: "active", ends_at: null }).eq("id", entitlement.id).eq("business_id", getBusiness()?.id);
+      if (error) throw error;
+      const { data: override } = await supabase.from("customer_product_access").select("id").eq("business_id", entitlement.business_id).eq("customer_id", entitlement.buyer_id).eq("product_id", entitlement.product_id).is("resource_id", null).eq("effect", "revoke").maybeSingle();
+      if (override) {
+        const removed = await supabase.from("customer_product_access").delete().eq("id", override.id);
+        if (removed.error) throw removed.error;
+      }
+      await loadWorkspaceData(supabase, currentUser);
+      document.querySelector(".customer-member-backdrop")?.remove();
+      customerMemberDialog(getBusiness(), entitlement.buyer_id, ordersCustomerName(entitlement.buyer_id));
+      portalToast("Purchased access restored.");
+    } catch (error) {
+      portalToast(error?.message || "Could not restore access.");
+    }
+    return;
+  }
+  if (target.matches("[data-member-access-reset]")) {
+    try {
+      const { error } = await supabase.from("customer_product_access").delete().eq("id", target.dataset.memberAccessReset).eq("business_id", getBusiness()?.id);
+      if (error) throw error;
+      const customerId = workspace.customerAccess.find((row) => row.id === target.dataset.memberAccessReset)?.customer_id;
+      await loadWorkspaceData(supabase, currentUser);
+      document.querySelector(".customer-member-backdrop")?.remove();
+      customerMemberDialog(getBusiness(), customerId, ordersCustomerName(customerId));
+      portalToast("Access override removed.");
+    } catch (error) {
+      portalToast(error?.message || "Could not remove access override.");
+    }
+    return;
+  }
+  if (target.matches("[data-member-unblock]")) {
+    try {
+      const customerId = workspace.customerBlocks.find((row) => row.id === target.dataset.memberUnblock)?.customer_id;
+      const { error } = await supabase.from("business_customer_blocks").delete().eq("id", target.dataset.memberUnblock).eq("business_id", getBusiness()?.id);
+      if (error) throw error;
+      await loadWorkspaceData(supabase, currentUser);
+      document.querySelector(".customer-member-backdrop")?.remove();
+      customerMemberDialog(getBusiness(), customerId, ordersCustomerName(customerId));
+      portalToast("Customer access restored.");
+    } catch (error) {
+      portalToast(error?.message || "Could not restore access.");
+    }
+    return;
+  }
+  if (target.matches("[data-resource-progress]")) {
+    try {
+      const resourceId = target.dataset.resourceProgress, existing = workspace.resourceProgress.find((row) => row.resource_id === resourceId && row.completed_at), productId = target.dataset.productId;
+      target.disabled = true;
+      const value = { business_id: target.dataset.businessId, customer_id: currentUser.id, product_id: productId, resource_id: resourceId, completed_at: existing ? null : (/* @__PURE__ */ new Date()).toISOString(), updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      const { error } = await supabase.from("member_resource_progress").upsert(value, { onConflict: "customer_id,resource_id" });
+      if (error) throw error;
+      await loadWorkspaceData(supabase, currentUser);
+      renderAuthRoute();
+      portalToast(existing ? "Completion status cleared." : "Resource marked complete.");
+    } catch (error) {
+      target.disabled = false;
+      portalToast(error?.message || "Could not save progress.");
+    }
     return;
   }
   if (target.matches("[data-copy-link]")) {

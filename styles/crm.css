@@ -41,3 +41,38 @@
 .portal-light .customer-table:has(th:nth-child(8)) th:last-child,.portal-light .customer-table:has(th:nth-child(8)) td:last-child{background:#fff}
 .portal-light .customer-table:has(th:nth-child(8)) th:first-child,.portal-light .customer-table:has(th:nth-child(8)) td:first-child{background:#fff}
 @media(max-width:700px){.customer-crm-modal{padding:21px 17px}.customer-crm-modal .form-field>span{gap:8px;align-items:flex-start}.customer-crm-footer{justify-content:stretch}.customer-crm-footer>*{flex:1}}
+.customer-profile-open{border:0;padding:0;background:none;color:#e5e8df;font-size:11px;font-weight:600;font-family:inherit;text-align:left;cursor:pointer}
+.customer-profile-open:hover{color:#d9f278}
+.customer-member-backdrop{z-index:90;align-items:flex-start;padding:20px;overflow:auto}
+.customer-member-modal{width:min(980px,100%);max-height:calc(100vh - 40px);overflow:auto;padding:28px}
+.customer-member-modal h2{margin:5px 0 2px;font:700 25px var(--display);letter-spacing:-.5px}
+.customer-member-subtitle{margin:0 0 18px;color:#8f9189;font-size:11px}
+.customer-member-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:15px}
+.customer-member-stats>div,.member-detail-card{padding:14px;border:1px solid #30322e;border-radius:10px;background:#171815}
+.customer-member-stats small{display:block;margin-bottom:6px;color:#96988f;font-size:10px}
+.customer-member-stats b{display:block;font-size:14px;line-height:1.4}
+.customer-member-stats>div:last-child b{font-size:11px}
+.customer-member-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.member-detail-card h3{margin:0 0 10px;font:650 14px var(--display)}
+.member-detail-card>p{margin:0 0 12px;color:#a1a39b;font-size:10px;line-height:1.55}
+.member-access-row,.member-history-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid #2c2e29;font-size:10px}
+.member-access-row>span:first-child,.member-history-row>span:first-child{min-width:0;display:flex;flex-direction:column;gap:4px}
+.member-access-row small,.member-history-row small{color:#92948c;font-size:9px;line-height:1.4}
+.member-access-row .portal-action{padding:5px 7px;font-size:9px;white-space:nowrap}
+.member-history-row time{color:#92948c;font-size:9px;text-align:right}
+.customer-empty-note{color:#8e9088!important;font-size:10px!important}
+.member-access-form,.customer-member-modal [data-member-block-form]{display:grid;gap:10px}
+.member-access-form label,.customer-member-modal [data-member-block-form] label{display:grid;gap:5px;color:#e1e2db;font-size:10px;font-weight:600}
+.member-access-form label small{color:#8c8e86;font-weight:400}
+.member-access-form input,.member-access-form select,.customer-member-modal [data-member-block-form] input{width:100%;min-height:36px;padding:7px 9px;border:1px solid #383a35;border-radius:7px;background:#111210;color:#eee;font:inherit;font-size:10px}
+.member-access-form>div{display:flex;gap:8px;flex-wrap:wrap}
+.member-access-form>div button,.customer-member-modal [data-member-block-form] button{min-height:34px;padding:0 12px;font-size:10px}
+.danger-action{border-color:#6a3933!important;color:#ffb0a4!important}
+.resource-progress-button{padding:5px 8px;font-size:9px;white-space:nowrap}
+.resource-progress-button.is-complete{border-color:#4a6338;color:#d9f278}
+.portal-light .customer-profile-open{color:#272820}
+.portal-light .customer-member-stats>div,.portal-light .member-detail-card{background:#fff;border-color:#ddd}
+.portal-light .member-access-form label,.portal-light .customer-member-modal [data-member-block-form] label{color:#252620}
+.portal-light .member-access-form input,.portal-light .member-access-form select,.portal-light .customer-member-modal [data-member-block-form] input{background:#fff;color:#222;border-color:#ddd}
+.portal-light .member-access-row,.portal-light .member-history-row{border-color:#e7e7e1}
+@media(max-width:720px){.customer-member-backdrop{padding:9px}.customer-member-modal{max-height:calc(100vh - 18px);padding:22px 15px}.customer-member-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.customer-member-grid{grid-template-columns:1fr}.member-access-row{align-items:flex-start;flex-wrap:wrap}}
