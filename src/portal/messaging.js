@@ -1,4 +1,5 @@
 let selectedConversationId = null;
+let pendingDraft = null;
 let realtimeChannel = null;
 let realtimeKey = '';
 
@@ -108,6 +109,15 @@ export async function loadCommunicationCenter(supabase, { business = null, user,
     const conversationMarkup = selected ? `<header class="inbox-conversation-head"><span class="inbox-avatar">${selected[creatorMode ? 'customer' : 'creator']?.avatar_url ? `<img src="${escapeHTML(selected[creatorMode ? 'customer' : 'creator'].avatar_url)}" alt="">` : escapeHTML(initialsFor(counterpart))}</span><span><b>${escapeHTML(counterpart)}</b><small>${escapeHTML(creatorMode ? (selected.customer?.username ? `@${selected.customer.username}` : 'Customer') : selected.business?.name || 'Creator')}</small></span><span class="inbox-thread-status"><i></i> Private conversation</span></header><div class="inbox-message-list" id="inbox-message-list">${renderMessages(messages, user.id, escapeHTML, initialsFor, counterpart)}</div>${creatorMode ? `<div class="message-template-toolbar"><label><span>Saved reply</span><select id="message-template-select" aria-label="Choose a saved reply"><option value="">${templates.length ? 'Select a saved reply' : 'No saved replies yet'}</option>${templates.map(template => `<option value="${escapeHTML(template.id)}">${escapeHTML(template.name)}</option>`).join('')}</select></label><button type="button" class="portal-action" data-template-insert ${templates.length ? '' : 'disabled'}>Insert</button><button type="button" class="portal-action" data-template-save>Save draft</button><button type="button" class="portal-action" data-template-manage>Manage</button></div>` : ''}<form class="inbox-compose" id="conversation-message-form" data-conversation-id="${escapeHTML(selected.id)}"><label class="inbox-sr-only" for="inbox-message-input">Write a message</label><textarea id="inbox-message-input" name="body" rows="1" maxlength="4000" placeholder="Write a message…" required></textarea><div class="inbox-compose-footer"><span>Direct message · Be kind and clear</span><button class="button button-primary" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg><span>Send</span></button></div></form>` : `<div class="inbox-select-empty"><span class="inbox-empty-icon">✉</span><b>Select a conversation</b><p>Choose a thread from the list to read and reply.</p></div>`;
     shell._messageTemplates = templates;
     shell.innerHTML = `<aside class="inbox-list-panel"><div class="inbox-list-toolbar"><label class="inbox-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" id="inbox-search" placeholder="Search conversations" aria-label="Search conversations"></label><button class="inbox-refresh" type="button" data-inbox-refresh aria-label="Refresh inbox" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></svg></button></div><div class="inbox-thread-list">${rowsMarkup}</div></aside><section class="inbox-conversation-panel">${conversationMarkup}</section>`;
+    if (pendingDraft?.conversationId === selected?.id) {
+      const composer = shell.querySelector('#inbox-message-input');
+      if (composer) {
+        composer.value = pendingDraft.body;
+        composer.focus({ preventScroll: true });
+        composer.setSelectionRange(composer.value.length, composer.value.length);
+      }
+      pendingDraft = null;
+    }
     shell.querySelector('#inbox-search')?.addEventListener('input', event => {
       const term = event.target.value.trim().toLocaleLowerCase();
       shell.querySelectorAll('.inbox-thread-row').forEach(row => { row.hidden = !row.textContent.toLocaleLowerCase().includes(term); });
@@ -160,7 +170,10 @@ export async function sendInboxMessage(supabase, { conversationId, user, body })
   selectedConversationId = conversationId;
 }
 
-export function selectInboxConversation(id) { selectedConversationId = id || null; }
+export function selectInboxConversation(id, draft = null) {
+  selectedConversationId = id || null;
+  pendingDraft = draft && id ? { conversationId: id, body: String(draft) } : null;
+}
 
 export async function stopCommunicationCenterRealtime(supabase) {
   if (realtimeChannel && supabase) await supabase.removeChannel(realtimeChannel);
