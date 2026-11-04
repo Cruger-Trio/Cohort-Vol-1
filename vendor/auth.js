@@ -4789,8 +4789,8 @@ var Push = class {
    * @param {() => Record<string, unknown>} payload - The payload, for example `{user_id: 123}`
    * @param {number} timeout - The push timeout in milliseconds
    */
-  constructor(channel, event, payload, timeout) {
-    this.channel = channel;
+  constructor(channel2, event, payload, timeout) {
+    this.channel = channel2;
     this.event = event;
     this.payload = payload || function() {
       return {};
@@ -5516,12 +5516,12 @@ var Presence = class _Presence {
    * @param {Channel} channel - The Channel
    * @param {PresenceOptions} [opts] - The options, for example `{events: {state: "state", diff: "diff"}}`
    */
-  constructor(channel, opts = {}) {
+  constructor(channel2, opts = {}) {
     let events = opts.events || /** @type {PresenceEvents} */
     { state: "presence_state", diff: "presence_diff" };
     this.state = /* @__PURE__ */ Object.create(null);
     this.pendingDiffs = [];
-    this.channel = channel;
+    this.channel = channel2;
     this.joinRef = null;
     this.caller = {
       onJoin: function() {
@@ -6365,9 +6365,9 @@ var Socket = class {
    * @param {unknown} [reason] underlying close/error event forwarded to channel error listeners
    */
   triggerChanError(reason) {
-    this.channels.forEach((channel) => {
-      if (!(channel.isErrored() || channel.isLeaving() || channel.isClosed())) {
-        channel.trigger(CHANNEL_EVENTS2.error, reason);
+    this.channels.forEach((channel2) => {
+      if (!(channel2.isErrored() || channel2.isLeaving() || channel2.isClosed())) {
+        channel2.trigger(CHANNEL_EVENTS2.error, reason);
       }
     });
   }
@@ -6396,9 +6396,9 @@ var Socket = class {
    *
    * @param {Channel} channel
    */
-  remove(channel) {
-    this.off(channel.stateChangeRefs);
-    this.channels = this.channels.filter((c) => c !== channel);
+  remove(channel2) {
+    this.off(channel2.stateChangeRefs);
+    this.channels = this.channels.filter((c) => c !== channel2);
   }
   /**
    * Removes `onOpen`, `onClose`, `onError,` and `onMessage` registrations.
@@ -6503,11 +6503,11 @@ var Socket = class {
       }
       if (this.hasLogger()) this.log("receive", `${payload.status || ""} ${topic} ${event} ${ref && "(" + ref + ")" || ""}`.trim(), payload);
       for (let i = 0; i < this.channels.length; i++) {
-        const channel = this.channels[i];
-        if (!channel.isMember(topic, event, payload, join_ref)) {
+        const channel2 = this.channels[i];
+        if (!channel2.isMember(topic, event, payload, join_ref)) {
           continue;
         }
-        channel.trigger(event, payload, ref, join_ref);
+        channel2.trigger(event, payload, ref, join_ref);
       }
       this.triggerStateCallbacks("message", msg);
     });
@@ -6543,19 +6543,19 @@ var Socket = class {
 
 // node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.js
 var PresenceAdapter = class _PresenceAdapter {
-  constructor(channel, opts) {
+  constructor(channel2, opts) {
     const phoenixOptions = phoenixPresenceOptions(opts);
-    this.presence = new Presence(channel.getChannel(), phoenixOptions);
+    this.presence = new Presence(channel2.getChannel(), phoenixOptions);
     this.presence.onJoin((key, currentPresence, newPresence) => {
       const onJoinPayload = _PresenceAdapter.onJoinPayload(key, currentPresence, newPresence);
-      channel.getChannel().trigger("presence", onJoinPayload);
+      channel2.getChannel().trigger("presence", onJoinPayload);
     });
     this.presence.onLeave((key, currentPresence, leftPresence) => {
       const onLeavePayload = _PresenceAdapter.onLeavePayload(key, currentPresence, leftPresence);
-      channel.getChannel().trigger("presence", onLeavePayload);
+      channel2.getChannel().trigger("presence", onLeavePayload);
     });
     this.presence.onSync(() => {
-      channel.getChannel().trigger("presence", { event: "sync" });
+      channel2.getChannel().trigger("presence", { event: "sync" });
     });
   }
   get state() {
@@ -6661,8 +6661,8 @@ var RealtimePresence = class {
    * })
    * ```
    */
-  constructor(channel, opts) {
-    this.channel = channel;
+  constructor(channel2, opts) {
+    this.channel = channel2;
     this.presenceAdapter = new PresenceAdapter(this.channel.channelAdapter, opts);
   }
 };
@@ -7975,10 +7975,10 @@ var RealtimeClient = class {
    *
    * @category Realtime
    */
-  async removeChannel(channel) {
-    const status2 = await channel.unsubscribe();
+  async removeChannel(channel2) {
+    const status2 = await channel2.unsubscribe();
     if (status2 === "ok") {
-      channel.teardown();
+      channel2.teardown();
     }
     return status2;
   }
@@ -7988,9 +7988,9 @@ var RealtimeClient = class {
    * @category Realtime
    */
   async removeAllChannels() {
-    const promises = this.channels.map(async (channel) => {
-      const result2 = await channel.unsubscribe();
-      channel.teardown();
+    const promises = this.channels.map(async (channel2) => {
+      const result2 = await channel2.unsubscribe();
+      channel2.teardown();
       return result2;
     });
     const result = await Promise.all(promises);
@@ -8162,8 +8162,8 @@ var RealtimeClient = class {
    *
    * @internal
    */
-  _remove(channel) {
-    this.channels = this.channels.filter((c) => c.topic !== channel.topic);
+  _remove(channel2) {
+    this.channels = this.channels.filter((c) => c.topic !== channel2.topic);
     if (this.channels.length === 0) {
       this.log("transport", "no channels remaining, scheduling disconnect");
       this._schedulePendingDisconnect();
@@ -8224,14 +8224,14 @@ var RealtimeClient = class {
     }
     if (this.accessTokenValue != tokenToSend) {
       this.accessTokenValue = tokenToSend;
-      this.channels.forEach((channel) => {
+      this.channels.forEach((channel2) => {
         const payload = {
           access_token: tokenToSend,
           version: DEFAULT_VERSION
         };
-        channel.updateJoinPayload(payload);
-        if (channel.joinedOnce && channel.channelAdapter.isJoined()) {
-          channel.channelAdapter.push(CHANNEL_EVENTS.access_token, {
+        channel2.updateJoinPayload(payload);
+        if (channel2.joinedOnce && channel2.channelAdapter.isJoined()) {
+          channel2.channelAdapter.push(CHANNEL_EVENTS.access_token, {
             access_token: tokenToSend
           });
         }
@@ -20696,8 +20696,8 @@ var SupabaseClient = class {
   * supabase.removeChannel(myChannel)
   * ```
   */
-  removeChannel(channel) {
-    return this.realtime.removeChannel(channel);
+  removeChannel(channel2) {
+    return this.realtime.removeChannel(channel2);
   }
   /**
   * Unsubscribes and removes all Realtime channels from Realtime client.
@@ -20812,6 +20812,9 @@ var workspace = {
   catalog: [],
   accessCodes: [],
   customerRelationships: [],
+  audienceSegments: [],
+  customerFollowUps: [],
+  unreadCreatorMessages: [],
   customerBlocks: [],
   customerAccess: [],
   customerProgress: [],
@@ -20868,10 +20871,10 @@ function fromProduct(row) {
 }
 async function loadWorkspaceData(supabase2, user) {
   if (!supabase2) {
-    Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], catalog: [], accessCodes: [], customerRelationships: [], customerBlocks: [], customerAccess: [], customerProgress: [], customerActivity: [], resourceProgress: [], personalBlocks: [] });
+    Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], catalog: [], accessCodes: [], customerRelationships: [], audienceSegments: [], customerFollowUps: [], unreadCreatorMessages: [], customerBlocks: [], customerAccess: [], customerProgress: [], customerActivity: [], resourceProgress: [], personalBlocks: [] });
     return workspace;
   }
-  if (!user) Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], accessCodes: [], customerRelationships: [], customerBlocks: [], customerAccess: [], customerProgress: [], customerActivity: [], resourceProgress: [], personalBlocks: [] });
+  if (!user) Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], accessCodes: [], customerRelationships: [], audienceSegments: [], customerFollowUps: [], unreadCreatorMessages: [], customerBlocks: [], customerAccess: [], customerProgress: [], customerActivity: [], resourceProgress: [], personalBlocks: [] });
   if (user) {
     const [{ data: profile }, { data: business, error: businessError }, { data: purchases, error: purchasesError }, { data: memberships, error: membershipsError }, { data: accessOverrides, error: accessOverridesError }, { data: personalBlocks, error: personalBlocksError }] = await Promise.all([
       supabase2.from("profiles").select("*").eq("id", user.id).maybeSingle(),
@@ -20910,30 +20913,39 @@ async function loadWorkspaceData(supabase2, user) {
     const businessBlocks = new Set(workspace.personalBlocks.map((row) => row.business_id));
     workspace.memberships = [...memberships || [], ...overrideMemberships.filter((override) => !(memberships || []).some((item) => item.product_id === override.product_id && item.status === "active"))].map((item) => businessBlocks.has(item.business_id) ? { ...item, status: "blocked" } : item);
     if (workspace.business) {
-      const [{ data: orders, error }, { data: entitlements, error: entitlementsError }, { data: accessCodes, error: accessCodesError }, { data: customerRelationships, error: customerRelationshipsError }, { data: customerBlocks, error: customerBlocksError }, { data: customerAccess, error: customerAccessError }, { data: customerProgress, error: customerProgressError }, { data: customerActivity, error: customerActivityError }, { data: resourceProgress, error: resourceProgressError }] = await Promise.all([
+      const [{ data: orders, error }, { data: entitlements, error: entitlementsError }, { data: accessCodes, error: accessCodesError }, { data: customerRelationships, error: customerRelationshipsError }, { data: audienceSegments, error: audienceSegmentsError }, { data: customerFollowUps, error: customerFollowUpsError }, { data: customerBlocks, error: customerBlocksError }, { data: customerAccess, error: customerAccessError }, { data: customerProgress, error: customerProgressError }, { data: customerActivity, error: customerActivityError }, { data: resourceProgress, error: resourceProgressError }, { data: unreadCreatorMessages, error: unreadCreatorMessagesError }] = await Promise.all([
         supabase2.from("orders").select("id,order_number,buyer_id,business_id,product_id,amount_paise,currency,status,created_at,paid_at,is_demo,answers,products(name,slug)").eq("business_id", workspace.business.id).order("created_at", { ascending: false }),
         supabase2.from("entitlements").select("id,buyer_id,business_id,product_id,status,starts_at,ends_at,products(name,prices(amount_paise,cadence))").eq("business_id", workspace.business.id).order("created_at", { ascending: false }),
         supabase2.from("product_access_codes").select("id,product_id,business_id,label,code_hint,max_redemptions,redemption_count,access_days,expires_at,disabled_at,created_at,products(name)").eq("business_id", workspace.business.id).order("created_at", { ascending: false }),
         supabase2.from("customer_relationships").select("business_id,customer_id,tags,note,updated_at").eq("business_id", workspace.business.id),
+        supabase2.from("creator_audience_segments").select("id,business_id,created_by,name,filters,created_at,updated_at").eq("business_id", workspace.business.id).order("created_at", { ascending: true }),
+        supabase2.from("customer_follow_ups").select("id,business_id,customer_id,created_by,title,notes,due_at,status,completed_at,created_at,updated_at").eq("business_id", workspace.business.id).order("due_at", { ascending: true }),
         supabase2.from("business_customer_blocks").select("id,business_id,customer_id,reason,created_at").eq("business_id", workspace.business.id),
         supabase2.from("customer_product_access").select("id,business_id,customer_id,product_id,resource_id,effect,reason,created_at,updated_at").eq("business_id", workspace.business.id),
         supabase2.from("member_resource_progress").select("id,business_id,customer_id,product_id,resource_id,completed_at,updated_at").eq("business_id", workspace.business.id),
         supabase2.from("community_comments").select("id,author_id,body,created_at,community_posts!inner(product_id,products!inner(name,business_id))").eq("community_posts.products.business_id", workspace.business.id).order("created_at", { ascending: false }).limit(500),
-        supabase2.from("member_resource_progress").select("id,business_id,customer_id,product_id,resource_id,completed_at,updated_at").eq("customer_id", user.id)
+        supabase2.from("member_resource_progress").select("id,business_id,customer_id,product_id,resource_id,completed_at,updated_at").eq("customer_id", user.id),
+        supabase2.from("creator_messages").select("id,body,created_at,conversation_id,creator_conversations!inner(id,business_id,creator_id,customer:profiles!creator_conversations_customer_id_fkey(full_name,username))").eq("creator_conversations.business_id", workspace.business.id).eq("creator_conversations.creator_id", user.id).neq("sender_id", user.id).is("read_at", null).order("created_at", { ascending: false }).limit(20)
       ]);
       if (error) throw error;
       if (entitlementsError) throw entitlementsError;
       if (accessCodesError) throw accessCodesError;
       if (customerRelationshipsError) throw customerRelationshipsError;
+      if (audienceSegmentsError) throw audienceSegmentsError;
+      if (customerFollowUpsError) throw customerFollowUpsError;
       if (customerBlocksError) throw customerBlocksError;
       if (customerAccessError) throw customerAccessError;
       if (customerProgressError) throw customerProgressError;
       if (customerActivityError) throw customerActivityError;
       if (resourceProgressError) throw resourceProgressError;
+      if (unreadCreatorMessagesError) throw unreadCreatorMessagesError;
       workspace.orders = orders || [];
       workspace.entitlements = entitlements || [];
       workspace.accessCodes = accessCodes || [];
       workspace.customerRelationships = customerRelationships || [];
+      workspace.audienceSegments = audienceSegments || [];
+      workspace.customerFollowUps = customerFollowUps || [];
+      workspace.unreadCreatorMessages = unreadCreatorMessages || [];
       workspace.customerBlocks = customerBlocks || [];
       workspace.customerAccess = customerAccess || [];
       workspace.customerProgress = customerProgress || [];
@@ -20944,6 +20956,9 @@ async function loadWorkspaceData(supabase2, user) {
       workspace.entitlements = [];
       workspace.accessCodes = [];
       workspace.customerRelationships = [];
+      workspace.audienceSegments = [];
+      workspace.customerFollowUps = [];
+      workspace.unreadCreatorMessages = [];
       workspace.customerBlocks = [];
       workspace.customerAccess = [];
       workspace.customerProgress = [];
@@ -21025,35 +21040,85 @@ var escapeHTML2 = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => (
 function businessHeading2(kicker, title, copy = "", action = "") {
   return `<div class="portal-page-heading business-heading"><div><span class="portal-kicker">${kicker}</span><h1>${title}</h1>${copy ? `<p>${copy}</p>` : ""}</div>${action}</div>`;
 }
-function businessCustomers(business, activeCustomerTab2) {
+function customerLastActivity(customerId) {
+  const dates = [
+    ...workspace.customerProgress.filter((row) => row.customer_id === customerId).map((row) => row.updated_at || row.completed_at),
+    ...workspace.customerActivity.filter((row) => row.author_id === customerId).map((row) => row.created_at)
+  ].filter(Boolean).map((value) => new Date(value).getTime()).filter(Number.isFinite);
+  return dates.length ? new Date(Math.max(...dates)).toISOString() : "";
+}
+function matchesAudience(person, filters = {}) {
+  const products = new Set(person.productIds || []);
+  if (filters.product_id && !products.has(filters.product_id)) return false;
+  if (filters.membership === "active" && !person.hasActiveMembership) return false;
+  if (filters.membership === "none" && person.hasActiveMembership) return false;
+  if (filters.tag && !(person.relationship?.tags || []).some((tag) => tag.toLowerCase() === filters.tag.toLowerCase())) return false;
+  if (Number(filters.min_spend) > 0 && person.totalSpend < Number(filters.min_spend)) return false;
+  const now = Date.now();
+  const paidAt = person.lastPurchase ? new Date(person.lastPurchase).getTime() : 0;
+  if (filters.purchase_window === "30d" && (!paidAt || now - paidAt > 30 * 864e5)) return false;
+  if (filters.purchase_window === "90d" && (!paidAt || now - paidAt > 90 * 864e5)) return false;
+  if (filters.purchase_window === "stale90" && paidAt && now - paidAt < 90 * 864e5) return false;
+  const activityAt = person.lastActivity ? new Date(person.lastActivity).getTime() : 0;
+  if (filters.activity_window === "active30" && (!activityAt || now - activityAt > 30 * 864e5)) return false;
+  if (filters.activity_window === "inactive90" && activityAt && now - activityAt < 90 * 864e5) return false;
+  return true;
+}
+function businessCustomers(business, activeCustomerTab2, savedSegments = []) {
   const relationships = new Map(workspace.customerRelationships.map((row) => [row.customer_id, row]));
   const blockedCustomers = new Set(workspace.customerBlocks.map((row) => row.customer_id));
   const buyers = /* @__PURE__ */ new Map();
+  const ensureBuyer = (key, demo = false, answers = {}, joinedAt = "") => {
+    const existing = buyers.get(key);
+    if (existing) return existing;
+    const row = {
+      buyerId: key,
+      name: demo ? answers.demo_customer_name || `Demo customer ${key.slice(0, 6)}` : `Customer ${key.slice(0, 6)}`,
+      email: demo ? answers.demo_customer_email || "demo@cohort.invalid" : "Private to customer",
+      status: "Order pending",
+      country: demo ? answers.demo_country || "India" : "\u2014",
+      totalSpend: 0,
+      joinedAt,
+      isDemo: demo,
+      relationship: relationships.get(key),
+      productIds: /* @__PURE__ */ new Set(),
+      paidOrders: 0,
+      lastPurchase: "",
+      hasActiveMembership: false,
+      lastActivity: customerLastActivity(key)
+    };
+    buyers.set(key, row);
+    return row;
+  };
   for (const order of workspace.orders) {
     const key = order.buyer_id;
     if (!key) continue;
     const answers = order.answers || {};
-    const row = buyers.get(key) || {
-      buyerId: key,
-      name: order.is_demo ? answers.demo_customer_name || `Demo customer ${key.slice(0, 6)}` : `Customer ${key.slice(0, 6)}`,
-      email: order.is_demo ? answers.demo_customer_email || "demo@cohort.invalid" : "Private to customer",
-      status: order.status === "paid" ? "Joined" : "Order pending",
-      country: order.is_demo ? answers.demo_country || "India" : "\u2014",
-      totalSpend: 0,
-      joinedAt: order.created_at,
-      isDemo: !!order.is_demo,
-      relationship: relationships.get(key)
-    };
+    const row = ensureBuyer(key, !!order.is_demo, answers, order.created_at);
     if (order.status === "paid") {
       row.totalSpend += moneyFromPaise(order.amount_paise);
       row.status = "Joined";
+      row.paidOrders += 1;
+      if (order.product_id) row.productIds.add(order.product_id);
+      const paidAt = order.paid_at || order.created_at;
+      if (!row.lastPurchase || new Date(paidAt) > new Date(row.lastPurchase)) row.lastPurchase = paidAt;
     }
     if (new Date(order.created_at) < new Date(row.joinedAt)) row.joinedAt = order.created_at;
-    buyers.set(key, row);
+  }
+  for (const item of workspace.entitlements) {
+    if (!item.buyer_id) continue;
+    const row = ensureBuyer(item.buyer_id, false, {}, item.starts_at || item.created_at || "");
+    if (item.product_id) row.productIds.add(item.product_id);
+    const isCurrent = item.status === "active" && (!item.starts_at || new Date(item.starts_at).getTime() <= Date.now()) && (!item.ends_at || new Date(item.ends_at).getTime() > Date.now());
+    row.hasActiveMembership ||= isCurrent;
+    if (isCurrent) row.status = "Joined";
   }
   const customers = [...buyers.values()].sort((a, b) => new Date(b.joinedAt) - new Date(a.joinedAt));
   customers.forEach((row) => {
     if (blockedCustomers.has(row.buyerId)) row.status = "Banned";
+  });
+  customers.forEach((row) => {
+    row.productIds = [...row.productIds];
   });
   const memberships = workspace.entitlements.map((item) => {
     const demoOrder = workspace.orders.find((order) => order.buyer_id === item.buyer_id && order.is_demo);
@@ -21078,13 +21143,40 @@ function businessCustomers(business, activeCustomerTab2) {
   const empty = activeCustomerTab2 === "Customers" ? "No customers yet" : activeCustomerTab2 === "Memberships" ? "No memberships yet" : "No people added";
   const sub = activeCustomerTab2 === "Customers" ? "Buyers from your orders appear here. Keep private notes and tags to remember what matters." : activeCustomerTab2 === "Memberships" ? "Member access is shown from active and past product entitlements." : "Team invitations are not available yet.";
   const headers = activeCustomerTab2 === "Customers" ? ["Customer", "Email", "Tags", "Status", "Country", "Total spend", "Joined at", "CRM"] : activeCustomerTab2 === "Memberships" ? ["Member", "Email", "Plan", "Status", "Price", "Started", "Access"] : ["Person", "Email", "Role", "Status", "Added"];
+  const presets = [
+    { id: "all", title: "All customers", copy: "Everyone in your customer list", filters: {} },
+    { id: "members", title: "Active members", copy: "Customers with current access", filters: { membership: "active" } },
+    { id: "recent", title: "Recent buyers", copy: "Paid in the last 30 days", filters: { purchase_window: "30d" } },
+    { id: "reengage", title: "Needs a follow-up", copy: "No Cohort activity in 90 days", filters: { activity_window: "inactive90" } }
+  ];
+  const count = (filters) => customers.filter((person) => matchesAudience(person, filters)).length;
+  const customerLabel = (customerId) => {
+    const order = workspace.orders.find((item) => item.buyer_id === customerId && item.is_demo);
+    return order?.answers?.demo_customer_name || `Customer ${String(customerId || "").slice(0, 6)}`;
+  };
+  const openFollowUps = workspace.customerFollowUps.filter((task) => task.status === "open").sort((a, b) => new Date(a.due_at) - new Date(b.due_at));
+  const dueToday = openFollowUps.filter((task) => new Date(task.due_at).toDateString() === (/* @__PURE__ */ new Date()).toDateString()).length;
+  const overdue = openFollowUps.filter((task) => new Date(task.due_at) < /* @__PURE__ */ new Date() && new Date(task.due_at).toDateString() !== (/* @__PURE__ */ new Date()).toDateString()).length;
+  const followUpQueue = activeCustomerTab2 === "Customers" ? `<section class="followup-queue" aria-labelledby="followup-queue-title">
+    <div class="followup-queue-head"><span class="followup-queue-icon" aria-hidden="true">\u2197</span><div><h3 id="followup-queue-title">Follow-up queue</h3><p>Your next conversations, organized by due date.</p></div><div class="followup-queue-count"><b>${openFollowUps.length}</b><span>open</span></div></div>
+    ${openFollowUps.length ? `<div class="followup-queue-list">${openFollowUps.slice(0, 4).map((task) => `<article class="followup-queue-item"><div><b>${escapeHTML2(task.title)}</b><small>${escapeHTML2(customerLabel(task.customer_id))} \xB7 ${escapeHTML2(when(task.due_at))}${new Date(task.due_at) < /* @__PURE__ */ new Date() ? " \xB7 Overdue" : ""}</small></div><div><button type="button" class="portal-action" data-customer-open="${escapeHTML2(task.customer_id)}">Open</button><button type="button" class="portal-action followup-done-button" data-follow-up-done="${escapeHTML2(task.id)}">Done</button></div></article>`).join("")}${openFollowUps.length > 4 ? `<p class="followup-queue-more">And ${openFollowUps.length - 4} more open ${openFollowUps.length - 4 === 1 ? "follow-up" : "follow-ups"}</p>` : ""}</div>` : '<p class="followup-queue-empty">No follow-ups yet. Add a reminder from any customer profile.</p>'}
+    <div class="followup-queue-meta"><span>${dueToday} due today</span><span>${overdue} overdue</span></div>
+  </section>` : "";
+  const audienceWorkbench = activeCustomerTab2 === "Customers" ? `<section class="audience-workbench" aria-labelledby="audience-heading">
+    <div class="audience-workbench-head"><div><span class="portal-kicker">AUDIENCE</span><h3 id="audience-heading">Find the right people</h3><p>Build a focused list from purchase, membership, tags, and recorded Cohort activity.</p></div><button class="button button-primary" type="button" data-audience-create><span aria-hidden="true">\uFF0B</span> Build audience</button></div>
+    <div class="audience-segment-grid">${presets.map((segment) => `<button type="button" class="audience-segment-card" data-audience-filter="${segment.id}" data-audience-filters="${escapeHTML2(JSON.stringify(segment.filters))}"><span class="audience-segment-count">${count(segment.filters)}</span><b>${segment.title}</b><small>${segment.copy}</small></button>`).join("")}
+    ${savedSegments.map((segment) => `<div class="audience-saved-wrap"><button type="button" class="audience-segment-card audience-saved-card" data-audience-filter="saved:${escapeHTML2(segment.id)}" data-audience-filters="${escapeHTML2(JSON.stringify(segment.filters || {}))}"><span class="audience-segment-count">${count(segment.filters || {})}</span><b>${escapeHTML2(segment.name)}</b><small>Saved audience</small></button><button type="button" class="audience-delete" data-audience-delete="${escapeHTML2(segment.id)}" aria-label="Delete ${escapeHTML2(segment.name)}" title="Delete audience">\xD7</button></div>`).join("")}</div>
+    <div class="audience-selection-note" id="audience-selection-note" aria-live="polite">Showing all ${customers.length} customers. Open a customer profile to start an individual follow-up.</div>
+  </section>` : "";
   return `${businessHeading2("RELATIONSHIPS", "Customers", "Keep track of buyers, membership access, and the follow-up each person needs.")}
     <div class="customer-tabs" role="tablist" aria-label="Business relationships">${["Customers", "Memberships", "People"].map((tab) => `<button type="button" role="tab" aria-selected="${activeCustomerTab2 === tab}" class="${activeCustomerTab2 === tab ? "selected" : ""}" data-customer-tab="${tab}">${tab}</button>`).join("")}</div>
     <div class="customer-page-title"><div><h2>${activeCustomerTab2}</h2><p>${activeCustomerTab2 === "Customers" ? `${customers.length} ${customers.length === 1 ? "buyer" : "buyers"} across your business` : activeCustomerTab2 === "Memberships" ? `${memberships.length} membership records` : "Invite teammates to help manage your business"}</p></div></div>
+    ${followUpQueue}
+    ${audienceWorkbench}
     <div class="customer-toolbar">
       <label class="customer-search"><span aria-hidden="true">\u2315</span><input id="business-customer-search" placeholder="Search by name, customer ID, or tag" aria-label="Search ${activeCustomerTab2.toLowerCase()}"></label>
       <select id="customer-status-filter" aria-label="Filter by status"><option value="all">All statuses</option><option>Joined</option><option>Active</option><option>Order pending</option><option>Expired</option><option>Revoked</option><option>Banned</option></select>
-      ${activeCustomerTab2 === "Customers" ? '<select id="customer-segment-filter" aria-label="Filter customer segment"><option value="all">All customers</option><option value="tagged">Has tags</option><option value="noted">Has a note</option><option value="demo">Demo data</option></select>' : ""}
+      ${activeCustomerTab2 === "Customers" ? '<select id="customer-segment-filter" aria-label="Filter customer segment"><option value="all">All records</option><option value="tagged">Has tags</option><option value="noted">Has a note</option><option value="demo">Demo data</option></select>' : ""}
       <select id="customer-date-filter" aria-label="Sort by join date"><option value="newest" selected>Newest first</option><option value="oldest">Oldest first</option></select>
       <span class="toolbar-spacer"></span><button class="portal-action" type="button" data-customer-export>Export</button>
     </div>
@@ -21096,7 +21188,7 @@ function businessCustomers(business, activeCustomerTab2) {
     const dateLabel = date ? new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" }) : "\u2014";
     const profileButton = `<button class="customer-profile-open" type="button" data-customer-open="${escapeHTML2(person.buyerId)}" aria-label="Open customer details for ${escapeHTML2(person.name)}">Open profile <span aria-hidden="true">\u2197</span></button>`;
     const crmButton = `<button class="customer-crm-edit" type="button" data-customer-crm="${escapeHTML2(person.buyerId)}" aria-label="Edit notes and tags for ${escapeHTML2(person.name)}">${crm?.note || tags.length ? "Edit notes" : "+ Add notes"}</button>`;
-    return `<tr data-customer-date="${escapeHTML2(date || "")}" data-customer-tags="${escapeHTML2(tags.join(" ").toLowerCase())}" data-customer-note="${escapeHTML2(crm?.note || "")}" data-customer-demo="${person.isDemo ? "true" : "false"}">
+    return `<tr data-customer-date="${escapeHTML2(date || "")}" data-customer-tags="${escapeHTML2(tags.join(" ").toLowerCase())}" data-customer-tag-list="${escapeHTML2(JSON.stringify(tags.map((tag) => tag.toLowerCase())))}" data-customer-note="${escapeHTML2(crm?.note || "")}" data-customer-demo="${person.isDemo ? "true" : "false"}" data-customer-status="${escapeHTML2(person.status.toLowerCase())}" data-customer-products="${escapeHTML2((person.productIds || []).join(","))}" data-customer-membership="${person.hasActiveMembership ? "active" : "none"}" data-customer-spend="${Number(person.totalSpend) || 0}" data-customer-orders="${Number(person.paidOrders) || 0}" data-customer-last-purchase="${escapeHTML2(person.lastPurchase || "")}" data-customer-last-activity="${escapeHTML2(person.lastActivity || "")}">
           <td><b>${profileButton}</b>${person.isDemo ? '<small class="demo-record-label">DEMO DATA</small>' : ""}</td>
           <td>${escapeHTML2(person.email)}</td>
           ${activeCustomerTab2 === "Customers" ? `<td class="customer-tag-cell">${tags.length ? tags.map((tag) => `<span class="customer-tag">${escapeHTML2(tag)}</span>`).join("") : '<span class="customer-no-tags">\u2014</span>'}</td>` : ""}
@@ -21105,6 +21197,35 @@ function businessCustomers(business, activeCustomerTab2) {
         </tr>`;
   }).join("")}
     </tbody></table>${list.length ? "" : `<div class="customer-empty"><span>\u25EF</span><b>${empty}</b><p>${sub}</p>${activeCustomerTab2 === "Customers" ? '<a class="text-link" href="#business/products">View products \u2192</a>' : ""}</div>`}</div>`;
+}
+function audienceSegmentDialog(business, segment = null) {
+  const filters = segment?.filters || {};
+  const modal = document.createElement("div");
+  modal.className = "portal-modal-backdrop audience-modal-backdrop";
+  modal.innerHTML = `<section class="portal-modal audience-modal" role="dialog" aria-modal="true" aria-labelledby="audience-modal-title">
+    <button class="portal-modal-close" type="button" data-close-modal aria-label="Close">\xD7</button>
+    <span class="portal-kicker">AUDIENCE BUILDER</span><h2 id="audience-modal-title">Save a customer segment</h2>
+    <p>Choose matching rules. The audience updates automatically as orders, access, tags, and activity change.</p>
+    <form id="audience-segment-form" data-business-id="${escapeHTML2(business.id)}" data-segment-id="${escapeHTML2(segment?.id || "")}">
+      <label class="form-field"><span>Segment name</span><input name="name" required minlength="2" maxlength="50" value="${escapeHTML2(segment?.name || "")}" placeholder="e.g. Course members to check in"></label>
+      <div class="audience-rule-grid">
+        <label class="form-field"><span>Product</span><select name="product_id"><option value="">Any product</option>${(business.products || []).map((product) => `<option value="${escapeHTML2(product.id)}" ${filters.product_id === product.id ? "selected" : ""}>${escapeHTML2(product.name)}</option>`).join("")}</select></label>
+        <label class="form-field"><span>Membership access</span><select name="membership"><option value="any">Any status</option><option value="active" ${filters.membership === "active" ? "selected" : ""}>Active access</option><option value="none" ${filters.membership === "none" ? "selected" : ""}>No active access</option></select></label>
+        <label class="form-field"><span>Customer tag</span><input name="tag" maxlength="24" value="${escapeHTML2(filters.tag || "")}" placeholder="Exact tag, e.g. VIP"></label>
+        <label class="form-field"><span>Paid purchase</span><select name="purchase_window"><option value="any">Any time</option><option value="30d" ${filters.purchase_window === "30d" ? "selected" : ""}>Within 30 days</option><option value="90d" ${filters.purchase_window === "90d" ? "selected" : ""}>Within 90 days</option><option value="stale90" ${filters.purchase_window === "stale90" ? "selected" : ""}>At least 90 days ago</option></select></label>
+        <label class="form-field"><span>Cohort activity</span><select name="activity_window"><option value="any">Any activity</option><option value="active30" ${filters.activity_window === "active30" ? "selected" : ""}>Recorded in 30 days</option><option value="inactive90" ${filters.activity_window === "inactive90" ? "selected" : ""}>No activity in 90 days</option></select></label>
+        <label class="form-field"><span>Minimum spend <small>INR</small></span><input name="min_spend" type="number" min="0" step="100" value="${Number(filters.min_spend) || ""}" placeholder="No minimum"></label>
+      </div>
+      <p class="audience-rule-hint">Activity means course progress or a community comment recorded in Cohort. External visits and email opens aren\u2019t tracked.</p>
+      <div class="customer-crm-footer"><button class="portal-action" type="button" data-close-modal>Cancel</button><button class="button button-primary" type="submit">Save segment</button></div>
+      <p class="auth-message" role="status"></p>
+    </form>
+  </section>`;
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) modal.remove();
+  });
+  document.body.append(modal);
+  modal.querySelector('[name="name"]')?.focus();
 }
 function customerCrmDialog(businessId, customerId, personName, relationship = {}) {
   const tags = Array.isArray(relationship.tags) ? relationship.tags.join(", ") : "";
@@ -21167,6 +21288,11 @@ function customerMemberDialog(business, customerId, personName) {
   const resourceOptions = products.flatMap((product) => (product.deliverables || []).map((file) => `<option value="${escapeHTML2(product.id)}::${escapeHTML2(file.id)}">${escapeHTML2(product.name)} \xB7 ${escapeHTML2(file.title || "Untitled resource")}</option>`)).join("");
   const historyRows = orders.length ? orders.map((row) => `<div class="member-history-row"><span><b>${escapeHTML2(row.products?.name || "Digital product")}</b><small>${escapeHTML2(row.order_number || row.id.slice(0, 8))} \xB7 ${escapeHTML2(when(row.created_at))}</small></span><span>${row.status === "paid" ? "\u20B9" + moneyFromPaise(row.amount_paise).toLocaleString("en-IN") : escapeHTML2(row.status)}</span></div>`).join("") : '<p class="customer-empty-note">No orders recorded for this customer.</p>';
   const activityRows = [...completed.map((row) => ({ date: row.completed_at, label: `Marked complete \xB7 ${resources.get(row.resource_id)?.title || "Resource"}`, product: names.get(row.product_id) })), ...replies.map((row) => ({ date: row.created_at, label: "Community reply", product: row.community_posts?.products?.name }))].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 12).map((row) => `<div class="member-history-row"><span><b>${escapeHTML2(row.label)}</b><small>${escapeHTML2(row.product || "Program")}</small></span><time>${escapeHTML2(when(row.date))}</time></div>`).join("") || '<p class="customer-empty-note">No learning or community activity has been recorded yet.</p>';
+  const customerFollowUps = workspace.customerFollowUps.filter((row) => row.customer_id === customerId).sort((a, b) => new Date(a.due_at) - new Date(b.due_at));
+  const dueDate = new Date(Date.now() + 864e5);
+  dueDate.setMinutes(dueDate.getMinutes() - dueDate.getTimezoneOffset());
+  const dueDateDefault = dueDate.toISOString().slice(0, 16);
+  const followUpRows = customerFollowUps.length ? customerFollowUps.map((task) => `<article class="customer-followup-row ${task.status === "done" ? "is-done" : ""}"><div><b>${escapeHTML2(task.title)}</b><small>${escapeHTML2(when(task.due_at))}${task.notes ? ` \xB7 ${escapeHTML2(task.notes)}` : ""}</small></div><span class="customer-followup-state ${task.status}">${task.status === "done" ? "Done" : task.status === "cancelled" ? "Cancelled" : new Date(task.due_at) < /* @__PURE__ */ new Date() ? "Overdue" : "Open"}</span>${task.status === "open" ? `<button type="button" class="portal-action" data-follow-up-done="${escapeHTML2(task.id)}">Mark done</button>` : ""}</article>`).join("") : '<p class="customer-empty-note">No follow-ups scheduled for this customer.</p>';
   const backdrop = document.createElement("div");
   backdrop.className = "portal-modal-backdrop customer-member-backdrop";
   backdrop.innerHTML = `<section class="portal-modal customer-member-modal" data-customer-id="${escapeHTML2(customerId)}" role="dialog" aria-modal="true" aria-labelledby="member-title">
@@ -21180,6 +21306,7 @@ function customerMemberDialog(business, customerId, personName) {
       <section class="member-detail-card"><h3>Member safety</h3>${block ? `<p>This customer is blocked from all programs in this business since ${escapeHTML2(when(block.created_at))}.${block.reason ? ` Reason: ${escapeHTML2(block.reason)}` : ""}</p><button type="button" class="portal-action" data-member-unblock="${escapeHTML2(block.id)}">Restore business access</button>` : `<p>Block this customer from all of your programs and private resources.</p><form id="member-block-form" data-member-block-form data-business-id="${escapeHTML2(business.id)}" data-customer-id="${escapeHTML2(customerId)}"><label>Reason (optional)<input name="reason" maxlength="500" placeholder="e.g. repeated abuse of community rules"></label><button type="submit" class="portal-action danger-action">Block from all programs</button><p class="auth-message" role="status"></p></form>`}</section>
       <section class="member-detail-card"><h3>Order history</h3><div class="member-history-list">${historyRows}</div></section>
       <section class="member-detail-card"><h3>Activity timeline</h3><p>Last activity is based on recorded resource completions and community replies.</p><div class="member-history-list">${activityRows}</div></section>
+      <section class="member-detail-card customer-followup-card"><div class="customer-followup-heading"><div><h3>Follow-up reminders</h3><p>Private reminders for your team. Nothing sends automatically.</p></div><span>${customerFollowUps.filter((task) => task.status === "open").length} open</span></div><div class="customer-followup-list">${followUpRows}</div><form id="customer-follow-up-form" class="customer-followup-form" data-business-id="${escapeHTML2(business.id)}" data-customer-id="${escapeHTML2(customerId)}"><label>What should you follow up on?<input name="title" maxlength="100" required placeholder="e.g. Check in on week one progress"></label><div class="customer-followup-form-grid"><label>Due date<input type="datetime-local" name="due_at" value="${dueDateDefault}" required></label><label>Private note <small>Optional</small><input name="notes" maxlength="1000" placeholder="Context for this follow-up"></label></div><button class="portal-action" type="submit">Add reminder</button><p class="auth-message" role="status"></p></form></section>
     </div>
   </section>`;
   backdrop.addEventListener("click", (event) => {
@@ -21454,6 +21581,26 @@ var ago = (value) => {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
   return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 };
+function messageTemplateEditor(template = null, escapeHTML7 = safe) {
+  const editing = Boolean(template?.id);
+  const backdrop = document.createElement("div");
+  backdrop.className = "portal-modal-backdrop message-template-backdrop";
+  backdrop.innerHTML = `<section class="portal-modal message-template-modal" role="dialog" aria-modal="true" aria-labelledby="message-template-title"><button class="portal-modal-close" type="button" data-template-close aria-label="Close">&times;</button><span class="portal-kicker">CREATOR INBOX</span><h2 id="message-template-title">${editing ? "Edit saved reply" : "Save as a reply"}</h2><p>Keep a useful response ready. You can personalize it before sending.</p><form id="message-template-form" data-template-id="${escapeHTML7(template?.id || "")}" data-business-id="${escapeHTML7(template?.business_id || "")}"><label class="form-field"><span>Template name</span><input name="name" maxlength="60" required value="${escapeHTML7(template?.name || "")}" placeholder="e.g. Welcome to the program"></label><label class="form-field"><span>Message</span><textarea name="body" maxlength="2000" rows="6" required placeholder="Write a thoughtful reply">${escapeHTML7(template?.body || "")}</textarea></label><p class="auth-message" role="status"></p><div class="message-template-actions"><button class="portal-action" type="button" data-template-close>Cancel</button><button class="button button-primary" type="submit">${editing ? "Save changes" : "Save template"}</button></div></form></section>`;
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop || event.target.closest("[data-template-close]")) backdrop.remove();
+  });
+  return backdrop;
+}
+function messageTemplateManager(templates, escapeHTML7 = safe) {
+  const backdrop = document.createElement("div");
+  backdrop.className = "portal-modal-backdrop message-template-backdrop";
+  const content = templates.length ? `<div class="message-template-list">${templates.map((template) => `<article><span><b>${escapeHTML7(template.name)}</b><small>${escapeHTML7(template.body.slice(0, 125))}${template.body.length > 125 ? "..." : ""}</small></span><div><button class="portal-action" type="button" data-template-edit="${escapeHTML7(template.id)}">Edit</button><button class="portal-action message-template-delete" type="button" data-template-delete="${escapeHTML7(template.id)}">Delete</button></div></article>`).join("")}</div>` : '<div class="message-template-empty"><b>No saved replies yet</b><p>Save a draft response once, then insert it into any customer conversation.</p></div>';
+  backdrop.innerHTML = `<section class="portal-modal message-template-modal" role="dialog" aria-modal="true" aria-labelledby="message-template-title"><button class="portal-modal-close" type="button" data-template-close aria-label="Close">&times;</button><span class="portal-kicker">CREATOR INBOX</span><h2 id="message-template-title">Saved replies</h2><p>Private to this business. Templates are inserted as drafts and never sent automatically.</p>${content}<div class="message-template-actions"><button class="portal-action" type="button" data-template-close>Done</button><button class="button button-primary" type="button" data-template-new>New template</button></div></section>`;
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop || event.target.closest("[data-template-close]")) backdrop.remove();
+  });
+  return backdrop;
+}
 function communicationCenterPage({ business = null, user, escapeHTML: escapeHTML7 = safe, initialsFor: initialsFor3 = (value) => String(value || "?").slice(0, 1).toUpperCase() }) {
   const creatorMode = Boolean(business && business.owner_id === user?.id);
   const title = creatorMode ? "Creator inbox" : "Messages";
@@ -21497,6 +21644,12 @@ async function loadCommunicationCenter(supabase2, { business = null, user, escap
     const { data: conversations, error } = await query;
     if (error) throw error;
     const rows = conversations || [];
+    let templates = [];
+    if (creatorMode) {
+      const response = await supabase2.from("creator_message_templates").select("id,business_id,creator_id,name,body,created_at,updated_at").eq("business_id", business.id).eq("creator_id", user.id).order("name", { ascending: true });
+      if (response.error) throw response.error;
+      templates = response.data || [];
+    }
     if (selectedConversationId && !rows.some((row) => row.id === selectedConversationId)) selectedConversationId = null;
     if (!selectedConversationId && rows.length) selectedConversationId = rows[0].id;
     const selected = rows.find((row) => row.id === selectedConversationId);
@@ -21514,7 +21667,8 @@ async function loadCommunicationCenter(supabase2, { business = null, user, escap
     }
     const counterpart = selected ? participantName(selected, creatorMode) : "";
     const rowsMarkup = rows.length ? rows.map((row) => messageListItem(row, creatorMode, selectedConversationId, user.id, escapeHTML7, initialsFor3)).join("") : `<div class="inbox-list-empty"><span class="inbox-empty-icon">${creatorMode ? "\u2197" : "\u2733"}</span><b>${creatorMode ? "Your inbox is ready" : "No messages yet"}</b><p>${creatorMode ? "Open a customer profile and choose Message customer to start a private thread." : "When a creator starts a conversation with you, it will appear here."}</p>${creatorMode ? '<a href="#business/customers">Open customers</a>' : '<a href="#explore">Explore the marketplace</a>'}</div>`;
-    const conversationMarkup = selected ? `<header class="inbox-conversation-head"><span class="inbox-avatar">${selected[creatorMode ? "customer" : "creator"]?.avatar_url ? `<img src="${escapeHTML7(selected[creatorMode ? "customer" : "creator"].avatar_url)}" alt="">` : escapeHTML7(initialsFor3(counterpart))}</span><span><b>${escapeHTML7(counterpart)}</b><small>${escapeHTML7(creatorMode ? selected.customer?.username ? `@${selected.customer.username}` : "Customer" : selected.business?.name || "Creator")}</small></span><span class="inbox-thread-status"><i></i> Private conversation</span></header><div class="inbox-message-list" id="inbox-message-list">${renderMessages(messages, user.id, escapeHTML7, initialsFor3, counterpart)}</div><form class="inbox-compose" id="conversation-message-form" data-conversation-id="${escapeHTML7(selected.id)}"><label class="inbox-sr-only" for="inbox-message-input">Write a message</label><textarea id="inbox-message-input" name="body" rows="1" maxlength="4000" placeholder="Write a message\u2026" required></textarea><div class="inbox-compose-footer"><span>Direct message \xB7 Be kind and clear</span><button class="button button-primary" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg><span>Send</span></button></div></form>` : `<div class="inbox-select-empty"><span class="inbox-empty-icon">\u2709</span><b>Select a conversation</b><p>Choose a thread from the list to read and reply.</p></div>`;
+    const conversationMarkup = selected ? `<header class="inbox-conversation-head"><span class="inbox-avatar">${selected[creatorMode ? "customer" : "creator"]?.avatar_url ? `<img src="${escapeHTML7(selected[creatorMode ? "customer" : "creator"].avatar_url)}" alt="">` : escapeHTML7(initialsFor3(counterpart))}</span><span><b>${escapeHTML7(counterpart)}</b><small>${escapeHTML7(creatorMode ? selected.customer?.username ? `@${selected.customer.username}` : "Customer" : selected.business?.name || "Creator")}</small></span><span class="inbox-thread-status"><i></i> Private conversation</span></header><div class="inbox-message-list" id="inbox-message-list">${renderMessages(messages, user.id, escapeHTML7, initialsFor3, counterpart)}</div>${creatorMode ? `<div class="message-template-toolbar"><label><span>Saved reply</span><select id="message-template-select" aria-label="Choose a saved reply"><option value="">${templates.length ? "Select a saved reply" : "No saved replies yet"}</option>${templates.map((template) => `<option value="${escapeHTML7(template.id)}">${escapeHTML7(template.name)}</option>`).join("")}</select></label><button type="button" class="portal-action" data-template-insert ${templates.length ? "" : "disabled"}>Insert</button><button type="button" class="portal-action" data-template-save>Save draft</button><button type="button" class="portal-action" data-template-manage>Manage</button></div>` : ""}<form class="inbox-compose" id="conversation-message-form" data-conversation-id="${escapeHTML7(selected.id)}"><label class="inbox-sr-only" for="inbox-message-input">Write a message</label><textarea id="inbox-message-input" name="body" rows="1" maxlength="4000" placeholder="Write a message\u2026" required></textarea><div class="inbox-compose-footer"><span>Direct message \xB7 Be kind and clear</span><button class="button button-primary" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg><span>Send</span></button></div></form>` : `<div class="inbox-select-empty"><span class="inbox-empty-icon">\u2709</span><b>Select a conversation</b><p>Choose a thread from the list to read and reply.</p></div>`;
+    shell._messageTemplates = templates;
     shell.innerHTML = `<aside class="inbox-list-panel"><div class="inbox-list-toolbar"><label class="inbox-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" id="inbox-search" placeholder="Search conversations" aria-label="Search conversations"></label><button class="inbox-refresh" type="button" data-inbox-refresh aria-label="Refresh inbox" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></svg></button></div><div class="inbox-thread-list">${rowsMarkup}</div></aside><section class="inbox-conversation-panel">${conversationMarkup}</section>`;
     shell.querySelector("#inbox-search")?.addEventListener("input", (event) => {
       const term = event.target.value.trim().toLocaleLowerCase();
@@ -21580,6 +21734,59 @@ async function stopCommunicationCenterRealtime(supabase2) {
   clearTimeout(loadCommunicationCenter._refresh);
 }
 
+// src/portal/notifications.js
+var escapeDefault = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+var channel = null;
+var channelClient = null;
+function dueTasks(workspace2) {
+  const now = /* @__PURE__ */ new Date();
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+  return (workspace2.customerFollowUps || []).filter((task) => task.status === "open" && new Date(task.due_at) <= endOfToday).sort((a, b) => new Date(a.due_at) - new Date(b.due_at));
+}
+function customerName(task, workspace2) {
+  const order = workspace2.orders.find((item) => item.buyer_id === task.customer_id);
+  if (order?.is_demo) return order.answers?.demo_customer_name || "Demo customer";
+  return `Customer ${String(task.customer_id || "").slice(0, 6)}`;
+}
+function timeLabel(value) {
+  const date = new Date(value), now = /* @__PURE__ */ new Date();
+  const sameDay = date.toDateString() === now.toDateString();
+  if (date < now) return `Overdue \xB7 ${date.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`;
+  return sameDay ? `Due today \xB7 ${date.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}` : "Due today";
+}
+function businessNotificationMarkup(workspace2, escapeHTML7 = escapeDefault) {
+  const messages = workspace2.unreadCreatorMessages || [];
+  const tasks = dueTasks(workspace2);
+  const count = messages.length + tasks.length;
+  const rows = [
+    ...messages.slice(0, 5).map((message) => {
+      const person = message.creator_conversations?.customer || {};
+      const name = person.full_name || (person.username ? `@${person.username}` : "Customer");
+      return `<a class="notification-row" href="#business/messages"><span class="notification-row-icon message">\u2709</span><span><b>New message from ${escapeHTML7(name)}</b><small>${escapeHTML7(message.body.slice(0, 86))}${message.body.length > 86 ? "\u2026" : ""}</small></span><time>${escapeHTML7(new Date(message.created_at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }))}</time></a>`;
+    }),
+    ...tasks.slice(0, 6).map((task) => `<a class="notification-row" href="#business/customers"><span class="notification-row-icon followup">\u2197</span><span><b>${escapeHTML7(task.title)}</b><small>${escapeHTML7(customerName(task, workspace2))} \xB7 ${escapeHTML7(timeLabel(task.due_at))}</small></span></a>`)
+  ];
+  const content = rows.length ? rows.join("") : '<div class="notification-empty"><span>\u2713</span><b>You\u2019re all caught up</b><small>New customer messages and follow-ups due today will appear here.</small></div>';
+  return `<div class="business-notifications"><button class="portal-icon-button notification-toggle" id="business-notification-toggle" data-notification-toggle aria-label="Notifications${count ? `, ${count} unread or due` : ""}" aria-expanded="false" aria-haspopup="true" aria-controls="business-notification-panel" title="Notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>${count ? `<span class="notification-count" id="business-notification-count">${count > 9 ? "9+" : count}</span>` : ""}</button><section class="business-notification-panel" id="business-notification-panel" aria-label="Notifications" hidden><header><span><b>Notifications</b><small>${count ? `${messages.length} unread message${messages.length === 1 ? "" : "s"} \xB7 ${tasks.length} follow-up${tasks.length === 1 ? "" : "s"} due` : "No new activity"}</small></span><a href="#business/messages">Open inbox</a></header><div class="notification-list">${content}</div><footer><a href="#business/customers">View follow-ups</a><a href="#business/messages">View inbox</a></footer></section></div>`;
+}
+async function bindBusinessNotificationRealtime(supabase2, business, user, workspace2, refreshMarkup) {
+  if (channel && channelClient) await channelClient.removeChannel(channel);
+  channel = null;
+  channelClient = supabase2;
+  if (!supabase2 || !business || !user) return;
+  channel = supabase2.channel(`cohort-notifications:${business.id}:${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "creator_messages" }, async () => {
+    try {
+      const { data, error } = await supabase2.from("creator_messages").select("id,body,created_at,conversation_id,creator_conversations!inner(id,business_id,creator_id,customer:profiles!creator_conversations_customer_id_fkey(full_name,username))").eq("creator_conversations.business_id", business.id).eq("creator_conversations.creator_id", user.id).neq("sender_id", user.id).is("read_at", null).order("created_at", { ascending: false }).limit(20);
+      if (error) throw error;
+      workspace2.unreadCreatorMessages = data || [];
+      refreshMarkup();
+    } catch (error) {
+      console.warn("Could not refresh Cohort notifications:", error.message);
+    }
+  }).subscribe();
+}
+
 // src/portal/index.js
 var app = document.querySelector("#app");
 for (const key of ["portal-theme", "analytics-hidden", "insights", "marketplace-query", "business-query"]) {
@@ -21639,6 +21846,7 @@ function authPage(mode) {
 }
 var activeProfileTab = "created";
 var activeCustomerTab = "Customers";
+var activeAudienceFilter = { id: "all", filters: {} };
 var iconSvg = { home: '<svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>', messages: '<svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 4a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg>', partners: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm7-7.8a4 4 0 0 1 0 7.6M20 21v-2a4 4 0 0 0-3-3.9"/></svg>', affiliates: '<svg viewBox="0 0 24 24"><circle cx="6" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><circle cx="6" cy="19" r="3"/><path d="m8.7 6.5 6.6 11m0-11L8.7 17.5"/></svg>', workforce: '<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18m-11 0v2h4v-2"/></svg>', communities: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>', settings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.7 1.7 0 0 0-1.9.3l-.1.1h-3.4l-.1-.2a1.7 1.7 0 0 0-1.6-1.1 1.7 1.7 0 0 0-.9.3l-.2.1L6.8 17l.1-.2a1.7 1.7 0 0 0-.3-1.9l-.1-.1v-3.4l.2-.1a1.7 1.7 0 0 0 1.1-1.6 1.7 1.7 0 0 0-.3-.9l-.1-.2 1.7-2.9.2.1a1.7 1.7 0 0 0 1.9-.3l.1-.1h3.4l.1.2a1.7 1.7 0 0 0 1.6 1.1 1.7 1.7 0 0 0 .9-.3l.2-.1 2.9 1.7-.1.2a1.7 1.7 0 0 0 .3 1.9l.1.1v3.4z"/></svg>' };
 var portalLinks = [["home", "Home"], ["orders", "Orders"], ["library", "My library"], ["messages", "Messages"], ["partners", "Partners"], ["affiliates", "Affiliates"], ["workforce", "Workforce"], ["communities", "Communities"]];
 var businessIcons = { home: iconSvg.home, analytics: '<svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 3 6-7"/></svg>', products: '<svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5zm-9 5v9l9 5 9-5V8M12 13v9"/></svg>', payments: '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg>', customers: iconSvg.partners, messages: iconSvg.messages, access: '<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9m-4 0h4v4M11 15h6"/></svg>', websites: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>', ads: '<svg viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 13v-2zm0 2-1 5h5l2-4m5-5 2-5"/></svg>', workforce: iconSvg.workforce, affiliates: iconSvg.affiliates, cards: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18m-14 6h4"/></svg>', support: iconSvg.messages, more: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>' };
@@ -21664,7 +21872,7 @@ function ordersCustomerName(customerId) {
 function businessShell(content, active2, business) {
   const name = business.name || "Your business";
   const profileName = displayName2(), avatar = workspace.profile?.avatar_url ? `<span class="portal-avatar has-image" style="background-image:url('${escapeHTML6(workspace.profile.avatar_url)}')"></span>` : `<span class="portal-avatar">${escapeHTML6(initialsFor2(profileName))}</span>`;
-  return `<div class="portal-app business-app"><header class="portal-topbar"><a class="portal-brand" href="#business/home"><span class="brand-mark">C</span><span>Cohort</span></a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search ${escapeHTML6(name)}" aria-label="Search business"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><a class="portal-icon-button" href="#business/messages" aria-label="Messages" title="Messages"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 4a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg></a><button class="portal-account-button" id="portal-account-toggle" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-controls="portal-account-menu">${avatar}<span class="account-name">${escapeHTML6(profileName)}</span><svg class="account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button><div class="portal-account-menu business-account-menu" id="portal-account-menu" role="menu" aria-labelledby="portal-account-toggle" hidden><div class="account-menu-head">${avatar}<span><b>${escapeHTML6(profileName)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><div class="account-business-identity"><small>BUSINESS WORKSPACE</small><b>${escapeHTML6(name)}</b><span>@${escapeHTML6(business.handle || "")}</span></div><a role="menuitem" href="#portal/profile"><span class="account-menu-icon">${iconSvg.partners}</span>Personal portal</a><a role="menuitem" href="#business/settings"><span class="account-menu-icon">${iconSvg.settings}</span>Business settings</a><a role="menuitem" href="#business/messages"><span class="account-menu-icon">${iconSvg.messages}</span>Creator inbox</a><a role="menuitem" href="#portal/help"><span class="account-menu-icon">?</span>Help and support</a><div class="account-menu-footer"><div class="theme-picks" aria-label="Appearance"><button data-theme="dark" aria-label="Dark appearance" title="Dark">\u25D0</button><button data-theme="light" aria-label="Light appearance" title="Light">\u263C</button></div><button class="account-signout" data-signout><span>\u21AA</span> Sign out</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar business-sidebar"><div class="business-switcher"><a class="workspace-personal" href="#portal/profile" title="Personal portal">${escapeHTML6(initialsFor2(profileName))}</a><button class="workspace-selected business-switch-button" title="Current business">${escapeHTML6(initialsFor2(name))}</button><button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add another business">+</button></div><div class="business-side-title">${escapeHTML6(name)}<span>${escapeHTML6(business.status === "setup" ? "Setup" : "Business")}</span></div><nav class="business-nav">${bizSections.map(([group, items]) => `${group ? `<span class="biz-section-label">${group}</span>` : ""}${items.map(([key, label]) => `<a class="portal-nav-link ${active2 === key ? "active" : ""}" href="#business/${key}"><span class="biz-icon">${businessIcons[key] || iconSvg.communities}</span>${label}${key === "workforce" ? '<small class="biz-badge">Beta</small>' : ""}</a>`).join("")}`).join("")}<div class="business-more-links" id="business-more-links" hidden><a href="#business/developer">Developer</a><a href="#business/settings">Settings</a></div></nav><div class="business-side-bottom"><a class="portal-nav-link ${active2 === "developer" ? "active" : ""}" href="#business/developer"><span class="biz-icon">${businessIcons.more}</span>Developer</a><a class="portal-nav-link ${active2 === "settings" ? "active" : ""}" href="#business/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main business-main">${content}</main></div></div>`;
+  return `<div class="portal-app business-app"><header class="portal-topbar"><a class="portal-brand" href="#business/home"><span class="brand-mark">C</span><span>Cohort</span></a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search ${escapeHTML6(name)}" aria-label="Search business"><kbd>Ctrl K</kbd></form><div class="portal-top-actions">${businessNotificationMarkup(workspace, escapeHTML6)}<button class="portal-account-button" id="portal-account-toggle" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-controls="portal-account-menu">${avatar}<span class="account-name">${escapeHTML6(profileName)}</span><svg class="account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button><div class="portal-account-menu business-account-menu" id="portal-account-menu" role="menu" aria-labelledby="portal-account-toggle" hidden><div class="account-menu-head">${avatar}<span><b>${escapeHTML6(profileName)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><div class="account-business-identity"><small>BUSINESS WORKSPACE</small><b>${escapeHTML6(name)}</b><span>@${escapeHTML6(business.handle || "")}</span></div><a role="menuitem" href="#portal/profile"><span class="account-menu-icon">${iconSvg.partners}</span>Personal portal</a><a role="menuitem" href="#business/settings"><span class="account-menu-icon">${iconSvg.settings}</span>Business settings</a><a role="menuitem" href="#business/messages"><span class="account-menu-icon">${iconSvg.messages}</span>Creator inbox</a><a role="menuitem" href="#portal/help"><span class="account-menu-icon">?</span>Help and support</a><div class="account-menu-footer"><div class="theme-picks" aria-label="Appearance"><button data-theme="dark" aria-label="Dark appearance" title="Dark">\u25D0</button><button data-theme="light" aria-label="Light appearance" title="Light">\u263C</button></div><button class="account-signout" data-signout><span>\u21AA</span> Sign out</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar business-sidebar"><div class="business-switcher"><a class="workspace-personal" href="#portal/profile" title="Personal portal">${escapeHTML6(initialsFor2(profileName))}</a><button class="workspace-selected business-switch-button" title="Current business">${escapeHTML6(initialsFor2(name))}</button><button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add another business">+</button></div><div class="business-side-title">${escapeHTML6(name)}<span>${escapeHTML6(business.status === "setup" ? "Setup" : "Business")}</span></div><nav class="business-nav">${bizSections.map(([group, items]) => `${group ? `<span class="biz-section-label">${group}</span>` : ""}${items.map(([key, label]) => `<a class="portal-nav-link ${active2 === key ? "active" : ""}" href="#business/${key}"><span class="biz-icon">${businessIcons[key] || iconSvg.communities}</span>${label}${key === "workforce" ? '<small class="biz-badge">Beta</small>' : ""}</a>`).join("")}`).join("")}<div class="business-more-links" id="business-more-links" hidden><a href="#business/developer">Developer</a><a href="#business/settings">Settings</a></div></nav><div class="business-side-bottom"><a class="portal-nav-link ${active2 === "developer" ? "active" : ""}" href="#business/developer"><span class="biz-icon">${businessIcons.more}</span>Developer</a><a class="portal-nav-link ${active2 === "settings" ? "active" : ""}" href="#business/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main business-main">${content}</main></div></div>`;
 }
 function businessHeading4(kicker, title, copy = "", action = "") {
   return `<div class="portal-page-heading business-heading"><div><span class="portal-kicker">${kicker}</span><h1>${title}</h1>${copy ? `<p>${copy}</p>` : ""}</div>${action}</div>`;
@@ -21677,7 +21885,7 @@ function businessPage(route, b, id) {
   if (route === "analytics") return businessAnalytics(b);
   if (route === "messages") return communicationCenterPage({ business: b, user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
   if (route === "payments") return businessPayments(workspace.orders);
-  if (route === "customers") return businessCustomers(b, activeCustomerTab);
+  if (route === "customers") return businessCustomers(b, activeCustomerTab, workspace.audienceSegments);
   if (route === "community") return businessCommunity(b, id);
   if (route === "access") return businessAccess(b);
   if (route === "websites") return `${businessHeading4("STOREFRONT", "Websites", "Manage the link customers use to find your Cohort business.")}<section class="portal-panel business-form"><h2>${b.website ? "Storefront link" : "Add a website"}</h2><p class="settings-row-note">Add your website or public storefront URL. This saves the link only; it does not publish a website.</p><form id="business-website-form"><label class="form-field"><span>Website URL</span><input name="website_url" type="url" value="${escapeHTML6(b.website || "")}" placeholder="https://your-site.in"></label><button class="button button-primary" type="submit">Save website link</button><p class="auth-message" id="auth-message" role="status"></p></form></section><section class="portal-panel website-preview"><b>Cohort storefront</b><p>${escapeHTML6(b.name)} | ${escapeHTML6(b.handle || "your-page")}</p><span>Product catalog and public checkout will be enabled in a later phase.</span></section>`;
@@ -21701,6 +21909,10 @@ function renderBusinessPage(route) {
   const parts = route.split("/"), section = parts[1] || "home", id = ["product-edit", "community"].includes(section) ? parts.slice(2).join("/") : "";
   const page = businessPage(section, business, id);
   app.innerHTML = businessShell(page, section === "product-edit" ? "products" : section, business);
+  void bindBusinessNotificationRealtime(supabase, business, currentUser, workspace, () => {
+    const node = document.querySelector(".business-notifications");
+    if (node) node.outerHTML = businessNotificationMarkup(workspace, escapeHTML6);
+  });
   if (section === "community" && id) void loadCommunityFeed(supabase, id);
   document.body.classList.toggle("portal-mode", true);
   document.body.classList.toggle("portal-light", localStorage.getItem("cohort-portal-theme") === "light");
@@ -21711,10 +21923,31 @@ function renderBusinessPage(route) {
   });
   const customerSearch = document.querySelector("#business-customer-search"), customerStatus = document.querySelector("#customer-status-filter"), customerSegment = document.querySelector("#customer-segment-filter"), customerDate = document.querySelector("#customer-date-filter");
   const filterCustomers = () => {
+    let visible = 0;
     document.querySelectorAll(".customer-table tbody tr").forEach((row) => {
-      const query = (customerSearch?.value || "").toLowerCase().trim(), status2 = customerStatus?.value || "all", segment = customerSegment?.value || "all", text = `${row.textContent} ${row.dataset.customerTags || ""} ${row.dataset.customerNote || ""}`.toLowerCase(), hasNote = !!row.dataset.customerNote?.trim(), hasTags = !!row.dataset.customerTags?.trim(), demo = row.dataset.customerDemo === "true";
-      row.hidden = !text.includes(query) || status2 !== "all" && !row.textContent.toLowerCase().includes(status2.toLowerCase()) || segment === "tagged" && !hasTags || segment === "noted" && !hasNote || segment === "demo" && !demo;
+      const query = (customerSearch?.value || "").toLowerCase().trim(), status2 = customerStatus?.value || "all", segment = customerSegment?.value || "all", filters = activeAudienceFilter.filters || {}, text = `${row.textContent} ${row.dataset.customerTags || ""} ${row.dataset.customerNote || ""}`.toLowerCase(), hasNote = !!row.dataset.customerNote?.trim(), hasTags = !!row.dataset.customerTags?.trim(), demo = row.dataset.customerDemo === "true", products = new Set((row.dataset.customerProducts || "").split(",").filter(Boolean)), purchase = row.dataset.customerLastPurchase ? new Date(row.dataset.customerLastPurchase).getTime() : 0, activity = row.dataset.customerLastActivity ? new Date(row.dataset.customerLastActivity).getTime() : 0, now = Date.now(), membership = row.dataset.customerMembership === "active";
+      let tags = [];
+      try {
+        tags = JSON.parse(row.dataset.customerTagList || "[]");
+      } catch {
+      }
+      let matches = true;
+      if (filters.product_id && !products.has(filters.product_id)) matches = false;
+      if (filters.membership === "active" && !membership) matches = false;
+      if (filters.membership === "none" && membership) matches = false;
+      if (filters.tag && !tags.includes(filters.tag.trim().toLowerCase())) matches = false;
+      if (Number(filters.min_spend) > 0 && Number(row.dataset.customerSpend || 0) < Number(filters.min_spend)) matches = false;
+      if (filters.purchase_window === "30d" && (!purchase || now - purchase > 30 * 864e5)) matches = false;
+      if (filters.purchase_window === "90d" && (!purchase || now - purchase > 90 * 864e5)) matches = false;
+      if (filters.purchase_window === "stale90" && purchase && now - purchase < 90 * 864e5) matches = false;
+      if (filters.activity_window === "active30" && (!activity || now - activity > 30 * 864e5)) matches = false;
+      if (filters.activity_window === "inactive90" && activity && now - activity < 90 * 864e5) matches = false;
+      const statusMatches = status2 === "all" || (row.dataset.customerStatus || "").includes(status2.toLowerCase());
+      row.hidden = !text.includes(query) || !statusMatches || segment === "tagged" && !hasTags || segment === "noted" && !hasNote || segment === "demo" && !demo || !matches;
+      if (!row.hidden) visible++;
     });
+    const note = document.querySelector("#audience-selection-note");
+    if (note) note.textContent = `${activeAudienceFilter.id === "all" ? "Showing all customers" : `Showing ${activeAudienceFilter.name || "selected audience"}`} \xB7 ${visible} ${visible === 1 ? "customer" : "customers"}. Open a profile to start an individual follow-up.`;
   };
   customerSearch?.addEventListener("input", filterCustomers);
   customerStatus?.addEventListener("change", filterCustomers);
@@ -21852,7 +22085,7 @@ document.addEventListener("submit", async (event) => {
   const form = event.target;
   if (!(form instanceof HTMLFormElement)) return;
   const communityForm = form.matches("[data-community-post-form], [data-community-reply-form]");
-  if (!communityForm && !["auth-form", "edit-profile-form", "business-form", "portal-search-form", "reset-request-form", "new-password-form", "business-product-form", "access-code-form", "redeem-access-code-form", "customer-crm-form", "member-access-form", "member-block-form", "conversation-message-form"].includes(form.id)) return;
+  if (!communityForm && !["auth-form", "edit-profile-form", "business-form", "portal-search-form", "reset-request-form", "new-password-form", "business-product-form", "access-code-form", "redeem-access-code-form", "customer-crm-form", "audience-segment-form", "customer-follow-up-form", "member-access-form", "member-block-form", "conversation-message-form", "message-template-form"].includes(form.id)) return;
   event.preventDefault();
   if (!supabase) return status(initError || "Supabase is not configured.", true);
   const data = new FormData(form);
@@ -21866,7 +22099,55 @@ document.addEventListener("submit", async (event) => {
     setProductSaveState(form, "Saving product details\xE2\u20AC\xA6");
   }
   try {
-    if (form.id === "conversation-message-form") {
+    if (form.id === "message-template-form") {
+      const name = String(data.get("name") || "").trim(), body = String(data.get("body") || "").trim(), businessId = form.dataset.businessId || getBusiness()?.id, templateId = form.dataset.templateId;
+      if (name.length < 2 || name.length > 60) throw new Error("Use a template name between 2 and 60 characters.");
+      if (!body || body.length > 2e3) throw new Error("Write a reply of up to 2,000 characters.");
+      const values = { name, body, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      const result = templateId ? await supabase.from("creator_message_templates").update(values).eq("id", templateId).eq("business_id", businessId) : await supabase.from("creator_message_templates").insert({ ...values, business_id: businessId, creator_id: currentUser.id });
+      if (result.error) {
+        if (result.error.code === "23505") throw new Error("A saved reply with that name already exists.");
+        throw result.error;
+      }
+      const draft = document.querySelector("#inbox-message-input")?.value || "";
+      document.querySelector(".message-template-backdrop")?.remove();
+      await loadCommunicationCenter(supabase, { business: getBusiness(), user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
+      const composer = document.querySelector("#inbox-message-input");
+      if (composer) composer.value = draft;
+      portalToast(templateId ? "Saved reply updated." : "Saved reply added.");
+    } else if (form.id === "customer-follow-up-form") {
+      const title = String(data.get("title") || "").trim(), notes = String(data.get("notes") || "").trim(), dueAt = new Date(String(data.get("due_at") || ""));
+      if (title.length < 3 || title.length > 100) throw new Error("Use a reminder title between 3 and 100 characters.");
+      if (notes.length > 1e3) throw new Error("Keep the private note under 1,000 characters.");
+      if (!Number.isFinite(dueAt.getTime())) throw new Error("Choose a valid follow-up date and time.");
+      const businessId = form.dataset.businessId, customerId = form.dataset.customerId;
+      const { error } = await supabase.from("customer_follow_ups").insert({ business_id: businessId, customer_id: customerId, created_by: currentUser.id, title, notes, due_at: dueAt.toISOString() });
+      if (error) throw error;
+      await loadWorkspaceData(supabase, currentUser);
+      document.querySelector(".customer-member-backdrop")?.remove();
+      customerMemberDialog(getBusiness(), customerId, ordersCustomerName(customerId));
+      portalToast("Follow-up reminder added.");
+    } else if (form.id === "audience-segment-form") {
+      const name = String(data.get("name") || "").trim();
+      if (name.length < 2 || name.length > 50) throw new Error("Use a segment name between 2 and 50 characters.");
+      const tag = String(data.get("tag") || "").trim();
+      if (tag.length > 24) throw new Error("Customer tags can be up to 24 characters.");
+      const minSpend = Number(data.get("min_spend") || 0);
+      if (!Number.isFinite(minSpend) || minSpend < 0) throw new Error("Enter a valid minimum spend.");
+      const filters = { product_id: String(data.get("product_id") || ""), membership: String(data.get("membership") || "any"), tag, min_spend: minSpend, purchase_window: String(data.get("purchase_window") || "any"), activity_window: String(data.get("activity_window") || "any") };
+      const values = { business_id: form.dataset.businessId, created_by: currentUser.id, name, filters, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      const segmentId = form.dataset.segmentId;
+      const result = segmentId ? await supabase.from("creator_audience_segments").update({ name, filters, updated_at: values.updated_at }).eq("id", segmentId).eq("business_id", values.business_id) : await supabase.from("creator_audience_segments").insert(values);
+      if (result.error) {
+        if (result.error.code === "23505") throw new Error("A segment with that name already exists.");
+        throw result.error;
+      }
+      await loadWorkspaceData(supabase, currentUser);
+      document.querySelector(".audience-modal-backdrop")?.remove();
+      activeAudienceFilter = { id: "all", filters: {} };
+      renderAuthRoute();
+      portalToast("Audience segment saved.");
+    } else if (form.id === "conversation-message-form") {
       await sendInboxMessage(supabase, { conversationId: form.dataset.conversationId, user: currentUser, body: data.get("body") });
       const isBusinessInbox = location.hash.slice(1) === "business/messages";
       await loadCommunicationCenter(supabase, { business: isBusinessInbox ? getBusiness() : null, user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
@@ -21887,8 +22168,8 @@ document.addEventListener("submit", async (event) => {
       if (result.error) throw result.error;
       await loadWorkspaceData(supabase, currentUser);
       document.querySelector(".customer-member-backdrop")?.remove();
-      const customerName = ordersCustomerName(customerId);
-      customerMemberDialog(getBusiness(), customerId, customerName);
+      const customerName2 = ordersCustomerName(customerId);
+      customerMemberDialog(getBusiness(), customerId, customerName2);
       portalToast(effect === "grant" ? "Access granted." : "Access restricted.");
     } else if (form.id === "member-block-form") {
       const { error } = await supabase.from("business_customer_blocks").insert({ business_id: form.dataset.businessId, customer_id: form.dataset.customerId, reason: String(data.get("reason") || "").trim(), created_by: currentUser.id });
@@ -22225,9 +22506,67 @@ document.addEventListener("click", async (event) => {
     menu.hidden = true;
     document.querySelector("[data-menu-toggle]")?.setAttribute("aria-expanded", "false");
   }
-  const target = event.target.closest("[data-menu-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-crm], [data-customer-open], [data-member-entitlement-revoke], [data-member-entitlement-restore], [data-member-access-reset], [data-member-unblock], [data-resource-progress], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete], [data-password-toggle], [data-inbox-open], [data-inbox-refresh], [data-message-customer]");
+  const notifications = document.querySelector("#business-notification-panel");
+  if (notifications && !event.target.closest(".business-notifications")) {
+    notifications.hidden = true;
+    document.querySelector("[data-notification-toggle]")?.setAttribute("aria-expanded", "false");
+  }
+  const target = event.target.closest("[data-menu-toggle], [data-notification-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-crm], [data-customer-open], [data-audience-create], [data-audience-delete], [data-audience-filter], [data-follow-up-done], [data-member-entitlement-revoke], [data-member-entitlement-restore], [data-member-access-reset], [data-member-unblock], [data-resource-progress], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete], [data-password-toggle], [data-inbox-open], [data-inbox-refresh], [data-message-customer], [data-template-insert], [data-template-save], [data-template-manage], [data-template-edit], [data-template-delete], [data-template-new], [data-template-close]");
   if (!target) return;
   event.preventDefault();
+  if (target.matches("[data-notification-toggle]")) {
+    const panel = document.querySelector("#business-notification-panel"), open = panel?.hidden;
+    if (panel) panel.hidden = !open;
+    target.setAttribute("aria-expanded", String(Boolean(open)));
+    return;
+  }
+  if (target.matches("[data-audience-create]")) {
+    audienceSegmentDialog(getBusiness());
+    return;
+  }
+  if (target.matches("[data-audience-filter]")) {
+    try {
+      activeAudienceFilter = { id: target.dataset.audienceFilter, name: target.querySelector("b")?.textContent || "audience", filters: JSON.parse(target.dataset.audienceFilters || "{}") };
+      document.querySelectorAll("[data-audience-filter]").forEach((item) => item.classList.toggle("is-active", item === target));
+      document.querySelector("#business-customer-search")?.dispatchEvent(new Event("input", { bubbles: true }));
+    } catch {
+      portalToast("Could not open this audience filter.");
+    }
+    return;
+  }
+  if (target.matches("[data-audience-delete]")) {
+    const segment = workspace.audienceSegments.find((item) => item.id === target.dataset.audienceDelete);
+    if (!segment) return;
+    if (!window.confirm(`Delete the saved audience \u201C${segment.name}\u201D?`)) return;
+    try {
+      const { error } = await supabase.from("creator_audience_segments").delete().eq("id", segment.id).eq("business_id", getBusiness()?.id);
+      if (error) throw error;
+      activeAudienceFilter = { id: "all", filters: {} };
+      await loadWorkspaceData(supabase, currentUser);
+      renderAuthRoute();
+      portalToast("Saved audience deleted.");
+    } catch (error) {
+      portalToast(error?.message || "Could not delete this audience.");
+    }
+    return;
+  }
+  if (target.matches("[data-follow-up-done]")) {
+    const task = workspace.customerFollowUps.find((row) => row.id === target.dataset.followUpDone);
+    if (!task || task.status !== "open") return;
+    try {
+      const { error } = await supabase.from("customer_follow_ups").update({ status: "done", completed_at: (/* @__PURE__ */ new Date()).toISOString(), updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", task.id).eq("business_id", getBusiness()?.id);
+      if (error) throw error;
+      await loadWorkspaceData(supabase, currentUser);
+      if (document.querySelector(".customer-member-backdrop")) {
+        document.querySelector(".customer-member-backdrop")?.remove();
+        customerMemberDialog(getBusiness(), task.customer_id, ordersCustomerName(task.customer_id));
+      } else renderAuthRoute();
+      portalToast("Follow-up marked complete.");
+    } catch (error) {
+      portalToast(error?.message || "Could not update this reminder.");
+    }
+    return;
+  }
   if (target.matches("[data-password-toggle]")) {
     const input = target.closest(".auth-input-wrap")?.querySelector("input");
     if (input) {
@@ -22236,6 +22575,67 @@ document.addEventListener("click", async (event) => {
       target.setAttribute("aria-label", reveal ? "Hide password" : "Show password");
       target.classList.toggle("is-visible", reveal);
     }
+    return;
+  }
+  if (target.matches("[data-template-insert]")) {
+    const id = document.querySelector("#message-template-select")?.value, template = document.querySelector("#inbox-shell")?._messageTemplates?.find((row) => row.id === id);
+    if (!template) {
+      portalToast("Choose a saved reply first.");
+      return;
+    }
+    const composer = document.querySelector("#inbox-message-input");
+    if (composer?.value.trim() && !window.confirm("Replace the current draft with this saved reply?")) return;
+    if (composer) {
+      composer.value = template.body;
+      composer.focus();
+    }
+    return;
+  }
+  if (target.matches("[data-template-save]")) {
+    const draft = document.querySelector("#inbox-message-input")?.value || "";
+    document.body.append(messageTemplateEditor({ business_id: getBusiness()?.id, body: draft }, escapeHTML6));
+    document.querySelector('.message-template-modal input[name="name"]')?.focus();
+    return;
+  }
+  if (target.matches("[data-template-manage]")) {
+    const templates = document.querySelector("#inbox-shell")?._messageTemplates || [];
+    document.body.append(messageTemplateManager(templates, escapeHTML6));
+    return;
+  }
+  if (target.matches("[data-template-new]")) {
+    target.closest(".message-template-backdrop")?.remove();
+    document.body.append(messageTemplateEditor({ business_id: getBusiness()?.id }, escapeHTML6));
+    document.querySelector('.message-template-modal input[name="name"]')?.focus();
+    return;
+  }
+  if (target.matches("[data-template-edit]")) {
+    const template = document.querySelector("#inbox-shell")?._messageTemplates?.find((row) => row.id === target.dataset.templateEdit);
+    if (!template) return;
+    target.closest(".message-template-backdrop")?.remove();
+    document.body.append(messageTemplateEditor(template, escapeHTML6));
+    document.querySelector('.message-template-modal input[name="name"]')?.focus();
+    return;
+  }
+  if (target.matches("[data-template-delete]")) {
+    const template = document.querySelector("#inbox-shell")?._messageTemplates?.find((row) => row.id === target.dataset.templateDelete);
+    if (!template) return;
+    if (!window.confirm(`Delete saved reply "${template.name}"?`)) return;
+    try {
+      const { error } = await supabase.from("creator_message_templates").delete().eq("id", template.id).eq("business_id", getBusiness()?.id).eq("creator_id", currentUser.id);
+      if (error) throw error;
+      const draft = document.querySelector("#inbox-message-input")?.value || "";
+      await loadCommunicationCenter(supabase, { business: getBusiness(), user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
+      const composer = document.querySelector("#inbox-message-input");
+      if (composer) composer.value = draft;
+      document.body.append(messageTemplateManager(document.querySelector("#inbox-shell")?._messageTemplates || [], escapeHTML6));
+      portalToast("Saved reply deleted.");
+    } catch (error) {
+      portalToast(error?.message || "Could not delete this saved reply.");
+    }
+    return;
+  }
+  if (target.matches("[data-template-close]")) {
+    target.closest(".message-template-backdrop")?.remove();
     return;
   }
   if (target.matches("[data-inbox-open]")) {

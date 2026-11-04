@@ -8,6 +8,9 @@ export const workspace = {
   catalog: [],
   accessCodes: [],
   customerRelationships: [],
+  audienceSegments: [],
+  customerFollowUps: [],
+  unreadCreatorMessages: [],
   customerBlocks: [],
   customerAccess: [],
   customerProgress: [],
@@ -69,10 +72,10 @@ export function fromProduct(row) {
 /** Fetch the authenticated owner workspace and RLS-filtered public catalog. */
 export async function loadWorkspaceData(supabase, user) {
   if (!supabase) {
-    Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], catalog: [], accessCodes: [], customerRelationships: [], customerBlocks: [], customerAccess: [], customerProgress: [], customerActivity: [], resourceProgress: [], personalBlocks: [] });
+    Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], catalog: [], accessCodes: [], customerRelationships: [], audienceSegments: [], customerFollowUps: [], unreadCreatorMessages: [], customerBlocks: [], customerAccess: [], customerProgress: [], customerActivity: [], resourceProgress: [], personalBlocks: [] });
     return workspace;
   }
-  if (!user) Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], accessCodes: [], customerRelationships: [], customerBlocks: [], customerAccess: [], customerProgress: [], customerActivity: [], resourceProgress: [], personalBlocks: [] });
+  if (!user) Object.assign(workspace, { profile: null, business: null, orders: [], entitlements: [], purchases: [], memberships: [], accessCodes: [], customerRelationships: [], audienceSegments: [], customerFollowUps: [], unreadCreatorMessages: [], customerBlocks: [], customerAccess: [], customerProgress: [], customerActivity: [], resourceProgress: [], personalBlocks: [] });
 
   if (user) {
   const [{ data: profile }, { data: business, error: businessError }, { data: purchases, error: purchasesError }, { data: memberships, error: membershipsError }, { data: accessOverrides, error: accessOverridesError }, { data: personalBlocks, error: personalBlocksError }] = await Promise.all([
@@ -107,30 +110,39 @@ export async function loadWorkspaceData(supabase, user) {
     .map(item => businessBlocks.has(item.business_id) ? { ...item, status: 'blocked' } : item);
 
   if (workspace.business) {
-    const [{ data: orders, error }, { data: entitlements, error: entitlementsError }, { data: accessCodes, error: accessCodesError }, { data: customerRelationships, error: customerRelationshipsError }, { data: customerBlocks, error: customerBlocksError }, { data: customerAccess, error: customerAccessError }, { data: customerProgress, error: customerProgressError }, { data: customerActivity, error: customerActivityError }, { data: resourceProgress, error: resourceProgressError }] = await Promise.all([
+    const [{ data: orders, error }, { data: entitlements, error: entitlementsError }, { data: accessCodes, error: accessCodesError }, { data: customerRelationships, error: customerRelationshipsError }, { data: audienceSegments, error: audienceSegmentsError }, { data: customerFollowUps, error: customerFollowUpsError }, { data: customerBlocks, error: customerBlocksError }, { data: customerAccess, error: customerAccessError }, { data: customerProgress, error: customerProgressError }, { data: customerActivity, error: customerActivityError }, { data: resourceProgress, error: resourceProgressError }, { data: unreadCreatorMessages, error: unreadCreatorMessagesError }] = await Promise.all([
       supabase.from('orders').select('id,order_number,buyer_id,business_id,product_id,amount_paise,currency,status,created_at,paid_at,is_demo,answers,products(name,slug)').eq('business_id', workspace.business.id).order('created_at', { ascending: false }),
       supabase.from('entitlements').select('id,buyer_id,business_id,product_id,status,starts_at,ends_at,products(name,prices(amount_paise,cadence))').eq('business_id', workspace.business.id).order('created_at', { ascending: false }),
       supabase.from('product_access_codes').select('id,product_id,business_id,label,code_hint,max_redemptions,redemption_count,access_days,expires_at,disabled_at,created_at,products(name)').eq('business_id', workspace.business.id).order('created_at', { ascending: false }),
       supabase.from('customer_relationships').select('business_id,customer_id,tags,note,updated_at').eq('business_id', workspace.business.id),
+      supabase.from('creator_audience_segments').select('id,business_id,created_by,name,filters,created_at,updated_at').eq('business_id', workspace.business.id).order('created_at', { ascending: true }),
+      supabase.from('customer_follow_ups').select('id,business_id,customer_id,created_by,title,notes,due_at,status,completed_at,created_at,updated_at').eq('business_id', workspace.business.id).order('due_at', { ascending: true }),
       supabase.from('business_customer_blocks').select('id,business_id,customer_id,reason,created_at').eq('business_id', workspace.business.id),
       supabase.from('customer_product_access').select('id,business_id,customer_id,product_id,resource_id,effect,reason,created_at,updated_at').eq('business_id', workspace.business.id),
       supabase.from('member_resource_progress').select('id,business_id,customer_id,product_id,resource_id,completed_at,updated_at').eq('business_id', workspace.business.id),
       supabase.from('community_comments').select('id,author_id,body,created_at,community_posts!inner(product_id,products!inner(name,business_id))').eq('community_posts.products.business_id', workspace.business.id).order('created_at', { ascending: false }).limit(500),
       supabase.from('member_resource_progress').select('id,business_id,customer_id,product_id,resource_id,completed_at,updated_at').eq('customer_id', user.id),
+      supabase.from('creator_messages').select('id,body,created_at,conversation_id,creator_conversations!inner(id,business_id,creator_id,customer:profiles!creator_conversations_customer_id_fkey(full_name,username))').eq('creator_conversations.business_id', workspace.business.id).eq('creator_conversations.creator_id', user.id).neq('sender_id', user.id).is('read_at', null).order('created_at', { ascending: false }).limit(20),
     ]);
     if (error) throw error;
     if (entitlementsError) throw entitlementsError;
     if (accessCodesError) throw accessCodesError;
     if (customerRelationshipsError) throw customerRelationshipsError;
+    if (audienceSegmentsError) throw audienceSegmentsError;
+    if (customerFollowUpsError) throw customerFollowUpsError;
     if (customerBlocksError) throw customerBlocksError;
     if (customerAccessError) throw customerAccessError;
     if (customerProgressError) throw customerProgressError;
     if (customerActivityError) throw customerActivityError;
     if (resourceProgressError) throw resourceProgressError;
+    if (unreadCreatorMessagesError) throw unreadCreatorMessagesError;
     workspace.orders = orders || [];
     workspace.entitlements = entitlements || [];
     workspace.accessCodes = accessCodes || [];
     workspace.customerRelationships = customerRelationships || [];
+    workspace.audienceSegments = audienceSegments || [];
+    workspace.customerFollowUps = customerFollowUps || [];
+    workspace.unreadCreatorMessages = unreadCreatorMessages || [];
     workspace.customerBlocks = customerBlocks || [];
     workspace.customerAccess = customerAccess || [];
     workspace.customerProgress = customerProgress || [];
@@ -141,6 +153,9 @@ export async function loadWorkspaceData(supabase, user) {
     workspace.entitlements = [];
     workspace.accessCodes = [];
     workspace.customerRelationships = [];
+    workspace.audienceSegments = [];
+    workspace.customerFollowUps = [];
+    workspace.unreadCreatorMessages = [];
     workspace.customerBlocks = [];
     workspace.customerAccess = [];
     workspace.customerProgress = [];
