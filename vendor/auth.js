@@ -21171,7 +21171,7 @@ function customerMemberDialog(business, customerId, personName) {
   backdrop.className = "portal-modal-backdrop customer-member-backdrop";
   backdrop.innerHTML = `<section class="portal-modal customer-member-modal" data-customer-id="${escapeHTML2(customerId)}" role="dialog" aria-modal="true" aria-labelledby="member-title">
     <button class="portal-modal-close" type="button" data-close-modal aria-label="Close">\xD7</button>
-    <span class="portal-kicker">CUSTOMER WORKSPACE</span><h2 id="member-title">${escapeHTML2(personName)}</h2><p class="customer-member-subtitle">${escapeHTML2(customerEmail)} \xB7 Customer ID ${escapeHTML2(customerId.slice(0, 8))}${firstOrder ? ` \xB7 Joined ${escapeHTML2(new Date(firstOrder.created_at).toLocaleDateString("en-IN"))}` : ""}</p>
+    <span class="portal-kicker">CUSTOMER WORKSPACE</span><h2 id="member-title">${escapeHTML2(personName)}</h2><p class="customer-member-subtitle">${escapeHTML2(customerEmail)} \xB7 Customer ID ${escapeHTML2(customerId.slice(0, 8))}${firstOrder ? ` \xB7 Joined ${escapeHTML2(new Date(firstOrder.created_at).toLocaleDateString("en-IN"))}` : ""}</p><button type="button" class="portal-action message-customer-cta" data-message-customer="${escapeHTML2(customerId)}" data-business-id="${escapeHTML2(business.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 4a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg> Message customer <span>\u2197</span></button>
     <div class="customer-member-stats"><div><small>Paid orders</small><b>${paid.length}</b></div><div><small>Total spend</small><b>\u20B9${spend.toLocaleString("en-IN")}</b></div><div><small>Last recorded activity</small><b>${escapeHTML2(lastActivity ? when(lastActivity) : "Not recorded")}</b></div><div><small>Program completion</small><b>${completed.length} of ${resourceTotal} resources</b></div></div>
     <div class="customer-member-grid"><section class="member-detail-card"><h3>Program access</h3>${accessRows || '<p class="customer-empty-note">No purchased program access found.</p>'}${overrideRows}</section>
       <section class="member-detail-card"><h3>Manage access</h3><p>Grant or restrict a program or one of its resources. Overrides do not alter orders or revenue.</p>
@@ -21441,6 +21441,145 @@ async function loadCommunityFeed(supabase2, productId) {
   }).join("");
 }
 
+// src/portal/messaging.js
+var selectedConversationId = null;
+var realtimeChannel = null;
+var realtimeKey = "";
+var safe = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+var ago = (value) => {
+  if (!value) return "";
+  const date = new Date(value), seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1e3));
+  if (seconds < 60) return "now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+};
+function communicationCenterPage({ business = null, user, escapeHTML: escapeHTML7 = safe, initialsFor: initialsFor3 = (value) => String(value || "?").slice(0, 1).toUpperCase() }) {
+  const creatorMode = Boolean(business && business.owner_id === user?.id);
+  const title = creatorMode ? "Creator inbox" : "Messages";
+  const subhead = creatorMode ? "Keep customer questions and program conversations in one place." : "Your conversations with Cohort creators, all together.";
+  return `<section class="communication-center" data-creator-mode="${creatorMode}">
+    <header class="inbox-heading"><div><span class="portal-kicker">${creatorMode ? "AUDIENCE" : "YOUR COHORT"}</span><h1>${title}</h1><p>${subhead}</p></div>${creatorMode ? '<a class="inbox-secondary-action" href="#business/customers"><span aria-hidden="true">\uFF0B</span> Find a customer</a>' : '<a class="inbox-secondary-action" href="#explore">Explore creators <span aria-hidden="true">\u2197</span></a>'}</header>
+    <div class="inbox-shell" id="inbox-shell" aria-live="polite"><div class="inbox-loading"><span class="cohort-spinner" aria-hidden="true"></span><span>Loading your inbox\u2026</span></div></div>
+  </section>`;
+}
+function participantName(row, creatorMode) {
+  const person = creatorMode ? row.customer : row.creator;
+  return person?.full_name || (person?.username ? `@${person.username}` : creatorMode ? "Cohort customer" : row.business?.name || "Cohort creator");
+}
+function messageListItem(row, creatorMode, activeId, userId, escapeHTML7, initialsFor3) {
+  const personName = participantName(row, creatorMode);
+  const last = row.creator_messages?.[0];
+  const unread = Boolean(last && last.sender_id !== userId && !last.read_at);
+  const detail = creatorMode ? row.customer?.username ? `@${row.customer.username}` : row.business?.name || "Customer" : row.business?.name || "Creator";
+  return `<button type="button" class="inbox-thread-row ${row.id === activeId ? "is-selected" : ""}" data-inbox-open="${escapeHTML7(row.id)}" aria-current="${row.id === activeId ? "true" : "false"}">
+    <span class="inbox-avatar">${row[creatorMode ? "customer" : "creator"]?.avatar_url ? `<img src="${escapeHTML7(row[creatorMode ? "customer" : "creator"].avatar_url)}" alt="">` : escapeHTML7(initialsFor3(personName))}</span>
+    <span class="inbox-thread-copy"><span class="inbox-thread-title"><b>${escapeHTML7(personName)}</b><time>${escapeHTML7(ago(row.last_message_at))}</time></span><span class="inbox-thread-detail">${escapeHTML7(detail)}</span><span class="inbox-thread-preview">${last ? `${last.sender_id === userId ? "You: " : ""}${escapeHTML7(last.body)}` : "Start a conversation"}</span></span>
+    ${unread ? '<i class="inbox-unread-dot" aria-label="Unread"></i>' : ""}
+  </button>`;
+}
+function renderMessages(messages, userId, escapeHTML7, initialsFor3, counterpart) {
+  if (!messages.length) return '<div class="inbox-thread-empty"><span class="inbox-empty-icon">\u2733</span><b>Start the conversation</b><p>Send a thoughtful note. Keep customer conversations useful and respectful.</p></div>';
+  return messages.map((message) => {
+    const own = message.sender_id === userId;
+    const date = new Date(message.created_at);
+    return `<article class="inbox-message ${own ? "is-own" : ""}"><span class="inbox-message-avatar">${own ? "You" : escapeHTML7(initialsFor3(counterpart))}</span><div class="inbox-message-body"><div class="inbox-message-meta"><b>${own ? "You" : escapeHTML7(counterpart)}</b><time>${escapeHTML7(date.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }))}</time></div><p>${escapeHTML7(message.body).replace(/\n/g, "<br>")}</p></div></article>`;
+  }).join("");
+}
+async function loadCommunicationCenter(supabase2, { business = null, user, escapeHTML: escapeHTML7 = safe, initialsFor: initialsFor3 = (value) => String(value || "?").slice(0, 1).toUpperCase() } = {}) {
+  const shell = document.querySelector("#inbox-shell");
+  if (!shell || !supabase2 || !user) return;
+  const creatorMode = Boolean(business && business.owner_id === user.id);
+  const contextKey = creatorMode ? `creator:${business.id}` : `customer:${user.id}`;
+  try {
+    let query = supabase2.from("creator_conversations").select(`id,business_id,customer_id,creator_id,last_message_at,customer:profiles!creator_conversations_customer_id_fkey(id,full_name,username,avatar_url),creator:profiles!creator_conversations_creator_id_fkey(id,full_name,username,avatar_url),business:businesses!creator_conversations_business_id_fkey(name),creator_messages!creator_messages_conversation_id_fkey(id,sender_id,body,read_at,created_at)`).order("created_at", { foreignTable: "creator_messages", ascending: false }).limit(1, { foreignTable: "creator_messages" }).order("last_message_at", { ascending: false });
+    query = creatorMode ? query.eq("business_id", business.id).eq("creator_id", user.id) : query.eq("customer_id", user.id);
+    const { data: conversations, error } = await query;
+    if (error) throw error;
+    const rows = conversations || [];
+    if (selectedConversationId && !rows.some((row) => row.id === selectedConversationId)) selectedConversationId = null;
+    if (!selectedConversationId && rows.length) selectedConversationId = rows[0].id;
+    const selected = rows.find((row) => row.id === selectedConversationId);
+    let messages = [];
+    if (selected) {
+      const response = await supabase2.from("creator_messages").select("id,conversation_id,sender_id,body,read_at,created_at").eq("conversation_id", selected.id).order("created_at", { ascending: true });
+      if (response.error) throw response.error;
+      messages = response.data || [];
+      const unread = messages.filter((item) => item.sender_id !== user.id && !item.read_at).map((item) => item.id);
+      if (unread.length) {
+        const marked = await supabase2.from("creator_messages").update({ read_at: (/* @__PURE__ */ new Date()).toISOString() }).in("id", unread);
+        if (marked.error) throw marked.error;
+        messages = messages.map((item) => unread.includes(item.id) ? { ...item, read_at: (/* @__PURE__ */ new Date()).toISOString() } : item);
+      }
+    }
+    const counterpart = selected ? participantName(selected, creatorMode) : "";
+    const rowsMarkup = rows.length ? rows.map((row) => messageListItem(row, creatorMode, selectedConversationId, user.id, escapeHTML7, initialsFor3)).join("") : `<div class="inbox-list-empty"><span class="inbox-empty-icon">${creatorMode ? "\u2197" : "\u2733"}</span><b>${creatorMode ? "Your inbox is ready" : "No messages yet"}</b><p>${creatorMode ? "Open a customer profile and choose Message customer to start a private thread." : "When a creator starts a conversation with you, it will appear here."}</p>${creatorMode ? '<a href="#business/customers">Open customers</a>' : '<a href="#explore">Explore the marketplace</a>'}</div>`;
+    const conversationMarkup = selected ? `<header class="inbox-conversation-head"><span class="inbox-avatar">${selected[creatorMode ? "customer" : "creator"]?.avatar_url ? `<img src="${escapeHTML7(selected[creatorMode ? "customer" : "creator"].avatar_url)}" alt="">` : escapeHTML7(initialsFor3(counterpart))}</span><span><b>${escapeHTML7(counterpart)}</b><small>${escapeHTML7(creatorMode ? selected.customer?.username ? `@${selected.customer.username}` : "Customer" : selected.business?.name || "Creator")}</small></span><span class="inbox-thread-status"><i></i> Private conversation</span></header><div class="inbox-message-list" id="inbox-message-list">${renderMessages(messages, user.id, escapeHTML7, initialsFor3, counterpart)}</div><form class="inbox-compose" id="conversation-message-form" data-conversation-id="${escapeHTML7(selected.id)}"><label class="inbox-sr-only" for="inbox-message-input">Write a message</label><textarea id="inbox-message-input" name="body" rows="1" maxlength="4000" placeholder="Write a message\u2026" required></textarea><div class="inbox-compose-footer"><span>Direct message \xB7 Be kind and clear</span><button class="button button-primary" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg><span>Send</span></button></div></form>` : `<div class="inbox-select-empty"><span class="inbox-empty-icon">\u2709</span><b>Select a conversation</b><p>Choose a thread from the list to read and reply.</p></div>`;
+    shell.innerHTML = `<aside class="inbox-list-panel"><div class="inbox-list-toolbar"><label class="inbox-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" id="inbox-search" placeholder="Search conversations" aria-label="Search conversations"></label><button class="inbox-refresh" type="button" data-inbox-refresh aria-label="Refresh inbox" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></svg></button></div><div class="inbox-thread-list">${rowsMarkup}</div></aside><section class="inbox-conversation-panel">${conversationMarkup}</section>`;
+    shell.querySelector("#inbox-search")?.addEventListener("input", (event) => {
+      const term = event.target.value.trim().toLocaleLowerCase();
+      shell.querySelectorAll(".inbox-thread-row").forEach((row) => {
+        row.hidden = !row.textContent.toLocaleLowerCase().includes(term);
+      });
+    });
+    const messageList = shell.querySelector("#inbox-message-list");
+    if (messageList) messageList.scrollTop = messageList.scrollHeight;
+    if (realtimeKey !== contextKey) {
+      if (realtimeChannel) await supabase2.removeChannel(realtimeChannel);
+      realtimeKey = contextKey;
+      realtimeChannel = supabase2.channel(`cohort-inbox:${contextKey}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "creator_messages" }, (payload) => {
+        if (payload.new?.conversation_id && rows.some((row) => row.id === payload.new.conversation_id)) {
+          clearTimeout(loadCommunicationCenter._refresh);
+          loadCommunicationCenter._refresh = setTimeout(() => loadCommunicationCenter(supabase2, { business, user, escapeHTML: escapeHTML7, initialsFor: initialsFor3 }), 180);
+        }
+      }).on("postgres_changes", { event: "INSERT", schema: "public", table: "creator_conversations" }, () => {
+        clearTimeout(loadCommunicationCenter._refresh);
+        loadCommunicationCenter._refresh = setTimeout(() => loadCommunicationCenter(supabase2, { business, user, escapeHTML: escapeHTML7, initialsFor: initialsFor3 }), 180);
+      }).subscribe();
+    }
+  } catch (error) {
+    shell.innerHTML = `<div class="inbox-error"><span class="inbox-empty-icon">!</span><b>We couldn\u2019t load messages</b><p>${escapeHTML7(error?.message || "Please refresh and try again.")}</p><button class="inbox-secondary-action" type="button" data-inbox-refresh>Try again</button></div>`;
+  }
+}
+async function createCustomerConversation(supabase2, { businessId, customerId, user }) {
+  const existing = await supabase2.from("creator_conversations").select("id").eq("business_id", businessId).eq("customer_id", customerId).maybeSingle();
+  if (existing.error) throw existing.error;
+  if (existing.data) {
+    selectedConversationId = existing.data.id;
+    return existing.data.id;
+  }
+  const created = await supabase2.from("creator_conversations").insert({ business_id: businessId, creator_id: user.id, customer_id: customerId }).select("id").single();
+  if (created.error) {
+    if (created.error.code === "23505") {
+      const raced = await supabase2.from("creator_conversations").select("id").eq("business_id", businessId).eq("customer_id", customerId).single();
+      if (!raced.error) {
+        selectedConversationId = raced.data.id;
+        return raced.data.id;
+      }
+    }
+    throw created.error;
+  }
+  selectedConversationId = created.data.id;
+  return created.data.id;
+}
+async function sendInboxMessage(supabase2, { conversationId, user, body }) {
+  const text = String(body || "").trim();
+  if (!text) throw new Error("Write a message before sending.");
+  if (text.length > 4e3) throw new Error("Keep messages under 4,000 characters.");
+  const { error } = await supabase2.from("creator_messages").insert({ conversation_id: conversationId, sender_id: user.id, body: text });
+  if (error) throw error;
+  selectedConversationId = conversationId;
+}
+function selectInboxConversation(id) {
+  selectedConversationId = id || null;
+}
+async function stopCommunicationCenterRealtime(supabase2) {
+  if (realtimeChannel && supabase2) await supabase2.removeChannel(realtimeChannel);
+  realtimeChannel = null;
+  realtimeKey = "";
+  clearTimeout(loadCommunicationCenter._refresh);
+}
+
 // src/portal/index.js
 var app = document.querySelector("#app");
 for (const key of ["portal-theme", "analytics-hidden", "insights", "marketplace-query", "business-query"]) {
@@ -21466,40 +21605,43 @@ var initError = "";
 function updateNav() {
   const actions = document.querySelector(".nav-actions");
   if (!actions) return;
-  actions.innerHTML = `<button class="icon-button" id="search-toggle" aria-label="Search">\xE2\u0152\u2022</button>
-    <a class="login-link" href="${currentUser ? "#portal" : "#login"}">${currentUser ? "My portal" : "Log in"}</a>
-    <a class="button button-dark button-sm" href="${currentUser ? "#portal" : "#signup-creator"}">${currentUser ? "Account \xE2\u2020\u2014" : "I\xE2\u20AC\u2122m a creator \xE2\u2020\u2014"}</a>
-    <button class="mobile-menu" id="mobile-menu" aria-label="Open menu">\xE2\u02DC\xB0</button>`;
+  const profile = workspace.profile || {};
+  actions.innerHTML = `<button class="icon-button nav-search-button" id="search-toggle" aria-label="Search Cohort" title="Search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
+    ${currentUser ? `<a class="public-account-link" href="#portal/profile"><span class="public-account-avatar" ${profile.avatar_url ? `style="background-image:url('${escapeHTML6(profile.avatar_url)}')"` : ""}>${profile.avatar_url ? "" : escapeHTML6(initialsFor2(displayName2()))}</span><span>My portal</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></a>` : `<a class="login-link" href="#login"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.5-3.4 2.8-5 7-5s6.5 1.6 7 5"/></svg>Log in</a><a class="button button-dark button-sm creator-nav-cta" href="#signup-creator">I\u2019m a creator <span aria-hidden="true">\u2197</span></a>`}
+    <button class="mobile-menu" id="mobile-menu" aria-label="Open menu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>`;
   document.querySelector("#search-toggle")?.addEventListener("click", () => {
     location.hash = "explore";
   });
-  document.querySelector("#mobile-menu")?.addEventListener("click", () => document.querySelector(".main-nav")?.classList.toggle("open"));
+  document.querySelector("#mobile-menu")?.addEventListener("click", (event) => {
+    const nav = document.querySelector(".main-nav"), open = nav?.classList.toggle("open");
+    event.currentTarget.setAttribute("aria-expanded", String(Boolean(open)));
+  });
 }
 function authPage(mode) {
   const signup = mode.startsWith("signup");
   const creatorSignup = mode === "signup-creator";
   const title = signup ? "Make a little room for good things." : "Good to see you again.";
   const intro = signup ? creatorSignup ? "Create your account, shape your creator profile, and launch your first product on Cohort." : "Join the home for independent creators and the people who love what they make." : "Log in to find your purchases, memberships and communities.";
-  return `<div class="container page"><div class="form-shell">
-    <span class="eyebrow">${signup ? "Your next chapter" : "Welcome back"}</span>
+  return `<div class="container page auth-page"><div class="form-shell auth-shell">
+    <span class="auth-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3"/><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M12 14v3"/></svg></span><span class="eyebrow">${signup ? "Your next chapter" : "Welcome back"}</span>
     <h1>${title}</h1><p>${intro}</p>
     <form id="auth-form" data-mode="${mode}" novalidate>
       ${signup ? '<label class="form-field"><span>Your name</span><input name="full_name" placeholder="e.g. Ananya Sharma" autocomplete="name" required></label>' : ""}
-      <label class="form-field"><span>Email address</span><input name="email" type="email" placeholder="you@example.com" autocomplete="email" required></label>
-      <label class="form-field"><span>Password</span><input name="password" type="password" placeholder="At least 8 characters" autocomplete="${signup ? "new-password" : "current-password"}" minlength="8" required></label>
+      <label class="form-field"><span>Email address</span><span class="auth-input-wrap"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg><input name="email" type="email" placeholder="you@example.com" autocomplete="email" required></span></label>
+      <label class="form-field"><span>Password</span><span class="auth-input-wrap"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><input name="password" type="password" placeholder="At least 8 characters" autocomplete="${signup ? "new-password" : "current-password"}" minlength="8" required><button type="button" class="auth-password-toggle" data-password-toggle aria-label="Show password"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></span></label>
       ${signup ? "" : '<div class="forgot-row"><a href="#forgot-password">Forgot password?</a></div>'}
-      <button class="button button-dark" type="submit">${signup ? "Create your account" : "Log in"}&nbsp; \xE2\u2020\u2014</button>
+      <button class="button button-dark auth-submit" type="submit">${signup ? "Create your account" : "Log in"}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
     </form>
     <p class="auth-message" id="auth-message" role="status">${initError ? escapeHTML6(initError) : ""}</p>
     <div class="form-foot">${signup ? 'Already have an account? <a href="#login">Log in</a>' : 'New to Cohort? <a href="#signup">Create an account</a>'}</div>
-    <small class="auth-legal">By continuing, you agree to Cohort\xE2\u20AC\u2122s Terms and Privacy Policy.</small>
+    <small class="auth-legal">By continuing, you agree to Cohort's Terms and Privacy Policy.</small>
   </div></div>`;
 }
 var activeProfileTab = "created";
 var activeCustomerTab = "Customers";
 var iconSvg = { home: '<svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>', messages: '<svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 4a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg>', partners: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm7-7.8a4 4 0 0 1 0 7.6M20 21v-2a4 4 0 0 0-3-3.9"/></svg>', affiliates: '<svg viewBox="0 0 24 24"><circle cx="6" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><circle cx="6" cy="19" r="3"/><path d="m8.7 6.5 6.6 11m0-11L8.7 17.5"/></svg>', workforce: '<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18m-11 0v2h4v-2"/></svg>', communities: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>', settings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.7 1.7 0 0 0-1.9.3l-.1.1h-3.4l-.1-.2a1.7 1.7 0 0 0-1.6-1.1 1.7 1.7 0 0 0-.9.3l-.2.1L6.8 17l.1-.2a1.7 1.7 0 0 0-.3-1.9l-.1-.1v-3.4l.2-.1a1.7 1.7 0 0 0 1.1-1.6 1.7 1.7 0 0 0-.3-.9l-.1-.2 1.7-2.9.2.1a1.7 1.7 0 0 0 1.9-.3l.1-.1h3.4l.1.2a1.7 1.7 0 0 0 1.6 1.1 1.7 1.7 0 0 0 .9-.3l.2-.1 2.9 1.7-.1.2a1.7 1.7 0 0 0 .3 1.9l.1.1v3.4z"/></svg>' };
 var portalLinks = [["home", "Home"], ["orders", "Orders"], ["library", "My library"], ["messages", "Messages"], ["partners", "Partners"], ["affiliates", "Affiliates"], ["workforce", "Workforce"], ["communities", "Communities"]];
-var businessIcons = { home: iconSvg.home, analytics: '<svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 3 6-7"/></svg>', products: '<svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5zm-9 5v9l9 5 9-5V8M12 13v9"/></svg>', payments: '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg>', customers: iconSvg.partners, access: '<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9m-4 0h4v4M11 15h6"/></svg>', websites: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>', ads: '<svg viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 13v-2zm0 2-1 5h5l2-4m5-5 2-5"/></svg>', workforce: iconSvg.workforce, affiliates: iconSvg.affiliates, cards: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18m-14 6h4"/></svg>', support: iconSvg.messages, more: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>' };
+var businessIcons = { home: iconSvg.home, analytics: '<svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 3 6-7"/></svg>', products: '<svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5zm-9 5v9l9 5 9-5V8M12 13v9"/></svg>', payments: '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg>', customers: iconSvg.partners, messages: iconSvg.messages, access: '<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9m-4 0h4v4M11 15h6"/></svg>', websites: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>', ads: '<svg viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 13v-2zm0 2-1 5h5l2-4m5-5 2-5"/></svg>', workforce: iconSvg.workforce, affiliates: iconSvg.affiliates, cards: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18m-14 6h4"/></svg>', support: iconSvg.messages, more: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>' };
 function displayName2() {
   return workspace.profile?.full_name || currentUser?.user_metadata?.full_name || currentUser?.email?.split("@")[0] || "Creator";
 }
@@ -21508,9 +21650,10 @@ function initialsFor2(value) {
 }
 function portalShell(content, active2 = "profile") {
   const name = displayName2(), business = getBusiness();
-  return `<div class="portal-app"><header class="portal-topbar"><a class="portal-brand" href="#portal/profile"><span class="brand-mark">C</span> Cohort</a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search Cohort" aria-label="Search Cohort"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><button class="portal-icon-button" data-notifications aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button><button class="portal-account-button" data-menu-toggle aria-expanded="false"><span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span><span class="account-name">${escapeHTML6(name)}</span><span aria-hidden="true">v</span></button><div class="portal-account-menu" id="portal-account-menu" hidden><div class="account-menu-head"><span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span><span><b>${escapeHTML6(name)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><a href="#portal/profile">View profile</a><a href="#portal/resolution">Resolution center</a><a href="#portal/orders">Orders</a><a href="#portal/library">My library</a><a href="#portal/settings">Settings</a><a href="#portal/help">Help and support</a><a href="#portal/language">Language</a><a href="#portal/legal">Legal</a><button data-signout>Sign out</button><div class="theme-picks"><button data-theme="dark">Dark</button><button data-theme="light">Light</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar"><div class="portal-workspace-switch"><button class="workspace-selected">${escapeHTML6(initialsFor2(name))}</button>${business ? `<a class="workspace-business" href="#business/home" title="Open ${escapeHTML6(business.name)}">${escapeHTML6(initialsFor2(business.name))}</a>` : ""}${business ? `<button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add business">+</button>` : `<a href="#portal/create-business" aria-label="Create business">+</a>`}</div><span class="sidebar-label">Personal</span><nav class="portal-nav">${portalLinks.map(([route, label]) => `<a class="portal-nav-link ${active2 === route ? "active" : ""}" href="#portal/${route}"><span>${iconSvg[route] || iconSvg.communities}</span>${label}</a>`).join("")}</nav><div class="portal-sidebar-bottom"><a class="portal-nav-link ${active2 === "settings" ? "active" : ""}" href="#portal/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main">${content}</main></div></div>`;
+  const avatar = workspace.profile?.avatar_url ? `<span class="portal-avatar has-image" style="background-image:url('${escapeHTML6(workspace.profile.avatar_url)}')" aria-label="${escapeHTML6(name)}"></span>` : `<span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span>`;
+  return `<div class="portal-app"><header class="portal-topbar"><a class="portal-brand" href="#portal/profile"><span class="brand-mark">C</span><span>Cohort</span></a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search Cohort" aria-label="Search Cohort"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><a class="portal-icon-button" href="#portal/messages" aria-label="Messages" title="Messages"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 4a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg></a><button class="portal-account-button" id="portal-account-toggle" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-controls="portal-account-menu">${avatar}<span class="account-name">${escapeHTML6(name)}</span><svg class="account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button><div class="portal-account-menu" id="portal-account-menu" role="menu" aria-labelledby="portal-account-toggle" hidden><div class="account-menu-head">${avatar}<span><b>${escapeHTML6(name)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><a role="menuitem" class="account-menu-profile" href="#portal/profile"><span class="account-menu-icon">${iconSvg.partners}</span><span><b>View profile</b><small>Your public Cohort profile</small></span><span class="account-menu-arrow">\u2197</span></a><div class="account-menu-label">YOUR ACCOUNT</div><a role="menuitem" href="#portal/orders"><span class="account-menu-icon">\u25A4</span>Orders</a><a role="menuitem" href="#portal/library"><span class="account-menu-icon">\u25A6</span>My library</a><a role="menuitem" href="#portal/messages"><span class="account-menu-icon">${iconSvg.messages}</span>Messages</a><a role="menuitem" href="#portal/settings"><span class="account-menu-icon">${iconSvg.settings}</span>Settings</a><div class="account-menu-label">SUPPORT</div><a role="menuitem" href="#portal/help"><span class="account-menu-icon">?</span>Help and support</a><a role="menuitem" href="#portal/resolution"><span class="account-menu-icon">\u25C9</span>Resolution center</a><div class="account-menu-footer"><div class="theme-picks" aria-label="Appearance"><button data-theme="dark" aria-label="Dark appearance" title="Dark">\u25D0</button><button data-theme="light" aria-label="Light appearance" title="Light">\u263C</button></div><button class="account-signout" data-signout><span>\u21AA</span> Sign out</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar"><div class="portal-workspace-switch"><button class="workspace-selected" aria-label="Personal workspace">${escapeHTML6(initialsFor2(name))}</button>${business ? `<a class="workspace-business" href="#business/home" title="Open ${escapeHTML6(business.name)}">${escapeHTML6(initialsFor2(business.name))}</a>` : ""}${business ? `<button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add business">+</button>` : `<a href="#portal/create-business" aria-label="Create business">+</a>`}</div><span class="sidebar-label">Personal</span><nav class="portal-nav">${portalLinks.map(([route, label]) => `<a class="portal-nav-link ${active2 === route ? "active" : ""}" href="#portal/${route}"><span>${iconSvg[route] || iconSvg.communities}</span>${label}</a>`).join("")}</nav><div class="portal-sidebar-bottom"><a class="portal-nav-link ${active2 === "settings" ? "active" : ""}" href="#portal/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main">${content}</main></div></div>`;
 }
-var bizSections = [["", [["home", "Home"], ["analytics", "Analytics"], ["products", "Products"], ["payments", "Payments"], ["customers", "Customers"], ["community", "Community"], ["access", "Access"], ["websites", "Websites"]]], ["Grow", [["ads", "Ads"], ["workforce", "Workforce"], ["affiliates", "Affiliates"]]], ["Operations", [["cards", "Cards"], ["support", "Support"], ["more", "More"]]]];
+var bizSections = [["", [["home", "Home"], ["analytics", "Analytics"], ["products", "Products"], ["payments", "Payments"], ["customers", "Customers"], ["community", "Community"], ["access", "Access"], ["websites", "Websites"]]], ["Grow", [["ads", "Ads"], ["workforce", "Workforce"], ["affiliates", "Affiliates"]]], ["Operations", [["messages", "Messages"], ["cards", "Cards"], ["support", "Support"], ["more", "More"]]]];
 function getBusiness() {
   return workspace.business;
 }
@@ -21520,7 +21663,8 @@ function ordersCustomerName(customerId) {
 }
 function businessShell(content, active2, business) {
   const name = business.name || "Your business";
-  return `<div class="portal-app business-app"><header class="portal-topbar"><a class="portal-brand" href="#business/home"><span class="brand-mark">C</span> Cohort</a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search ${escapeHTML6(name)}" aria-label="Search business"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><button class="portal-icon-button" data-notifications aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button><button class="portal-account-button" data-menu-toggle aria-expanded="false"><span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span><span class="account-name">${escapeHTML6(displayName2())}</span><span>v</span></button><div class="portal-account-menu" id="portal-account-menu" hidden><div class="account-menu-head"><span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span><span><b>${escapeHTML6(name)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><a href="#portal/profile">Personal portal</a><a href="#business/settings">Business settings</a><a href="#portal/help">Help and support</a><button data-signout>Sign out</button><div class="theme-picks"><button data-theme="dark">Dark</button><button data-theme="light">Light</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar business-sidebar"><div class="business-switcher"><a class="workspace-personal" href="#portal/profile" title="Personal portal">${escapeHTML6(initialsFor2(displayName2()))}</a><button class="workspace-selected business-switch-button" title="Current business">${escapeHTML6(initialsFor2(name))}</button><button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add another business">+</button></div><div class="business-side-title">${escapeHTML6(name)}<span>${escapeHTML6(business.status === "setup" ? "Setup" : "Business")}</span></div><nav class="business-nav">${bizSections.map(([group, items]) => `${group ? `<span class="biz-section-label">${group}</span>` : ""}${items.map(([key, label]) => `<a class="portal-nav-link ${active2 === key ? "active" : ""}" href="#business/${key}"><span class="biz-icon">${businessIcons[key] || iconSvg.communities}</span>${label}${key === "workforce" ? '<small class="biz-badge">Beta</small>' : ""}</a>`).join("")}`).join("")}<div class="business-more-links" id="business-more-links" hidden><a href="#business/developer">Developer</a><a href="#business/settings">Settings</a></div></nav><div class="business-side-bottom"><a class="portal-nav-link ${active2 === "developer" ? "active" : ""}" href="#business/developer"><span class="biz-icon">${businessIcons.more}</span>Developer</a><a class="portal-nav-link ${active2 === "settings" ? "active" : ""}" href="#business/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main business-main">${content}</main></div></div>`;
+  const profileName = displayName2(), avatar = workspace.profile?.avatar_url ? `<span class="portal-avatar has-image" style="background-image:url('${escapeHTML6(workspace.profile.avatar_url)}')"></span>` : `<span class="portal-avatar">${escapeHTML6(initialsFor2(profileName))}</span>`;
+  return `<div class="portal-app business-app"><header class="portal-topbar"><a class="portal-brand" href="#business/home"><span class="brand-mark">C</span><span>Cohort</span></a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search ${escapeHTML6(name)}" aria-label="Search business"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><a class="portal-icon-button" href="#business/messages" aria-label="Messages" title="Messages"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 4a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg></a><button class="portal-account-button" id="portal-account-toggle" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-controls="portal-account-menu">${avatar}<span class="account-name">${escapeHTML6(profileName)}</span><svg class="account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button><div class="portal-account-menu business-account-menu" id="portal-account-menu" role="menu" aria-labelledby="portal-account-toggle" hidden><div class="account-menu-head">${avatar}<span><b>${escapeHTML6(profileName)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><div class="account-business-identity"><small>BUSINESS WORKSPACE</small><b>${escapeHTML6(name)}</b><span>@${escapeHTML6(business.handle || "")}</span></div><a role="menuitem" href="#portal/profile"><span class="account-menu-icon">${iconSvg.partners}</span>Personal portal</a><a role="menuitem" href="#business/settings"><span class="account-menu-icon">${iconSvg.settings}</span>Business settings</a><a role="menuitem" href="#business/messages"><span class="account-menu-icon">${iconSvg.messages}</span>Creator inbox</a><a role="menuitem" href="#portal/help"><span class="account-menu-icon">?</span>Help and support</a><div class="account-menu-footer"><div class="theme-picks" aria-label="Appearance"><button data-theme="dark" aria-label="Dark appearance" title="Dark">\u25D0</button><button data-theme="light" aria-label="Light appearance" title="Light">\u263C</button></div><button class="account-signout" data-signout><span>\u21AA</span> Sign out</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar business-sidebar"><div class="business-switcher"><a class="workspace-personal" href="#portal/profile" title="Personal portal">${escapeHTML6(initialsFor2(profileName))}</a><button class="workspace-selected business-switch-button" title="Current business">${escapeHTML6(initialsFor2(name))}</button><button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add another business">+</button></div><div class="business-side-title">${escapeHTML6(name)}<span>${escapeHTML6(business.status === "setup" ? "Setup" : "Business")}</span></div><nav class="business-nav">${bizSections.map(([group, items]) => `${group ? `<span class="biz-section-label">${group}</span>` : ""}${items.map(([key, label]) => `<a class="portal-nav-link ${active2 === key ? "active" : ""}" href="#business/${key}"><span class="biz-icon">${businessIcons[key] || iconSvg.communities}</span>${label}${key === "workforce" ? '<small class="biz-badge">Beta</small>' : ""}</a>`).join("")}`).join("")}<div class="business-more-links" id="business-more-links" hidden><a href="#business/developer">Developer</a><a href="#business/settings">Settings</a></div></nav><div class="business-side-bottom"><a class="portal-nav-link ${active2 === "developer" ? "active" : ""}" href="#business/developer"><span class="biz-icon">${businessIcons.more}</span>Developer</a><a class="portal-nav-link ${active2 === "settings" ? "active" : ""}" href="#business/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main business-main">${content}</main></div></div>`;
 }
 function businessHeading4(kicker, title, copy = "", action = "") {
   return `<div class="portal-page-heading business-heading"><div><span class="portal-kicker">${kicker}</span><h1>${title}</h1>${copy ? `<p>${copy}</p>` : ""}</div>${action}</div>`;
@@ -21531,6 +21675,7 @@ function businessPage(route, b, id) {
   if (route === "product-new") return businessProductForm();
   if (route === "product-edit") return businessProductForm((Array.isArray(b.products) ? b.products : []).find((p) => p && p.id === id));
   if (route === "analytics") return businessAnalytics(b);
+  if (route === "messages") return communicationCenterPage({ business: b, user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
   if (route === "payments") return businessPayments(workspace.orders);
   if (route === "customers") return businessCustomers(b, activeCustomerTab);
   if (route === "community") return businessCommunity(b, id);
@@ -21623,6 +21768,7 @@ function portalPage(route = "profile") {
   if (!supabase || !currentUser) return `<div class="container page"><div class="empty-state"><b>${supabase ? "Log in to open your portal." : "Connecting your account..."}</b>${initError ? escapeHTML6(initError) : ""}<a class="button button-dark" href="#login">Log in &rarr;</a></div></div>`;
   if (route === "onboarding") return portalShell(creatorOnboarding({ profile: workspace.profile, business: getBusiness() }), "home");
   if (route === "communities") return portalShell(memberCommunities(workspace.memberships), "communities");
+  if (route === "messages") return portalShell(communicationCenterPage({ business: null, user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 }), "messages");
   if (route.startsWith("community/")) {
     const productId = route.slice("community/".length), membership = workspace.memberships.find((item) => item.product_id === productId);
     const content = memberCommunity(membership);
@@ -21644,8 +21790,10 @@ function portalToast(message) {
   node._timer = setTimeout(() => node.classList.remove("show"), 2600);
 }
 function renderAuthRoute() {
+  document.querySelectorAll(".portal-modal-backdrop, .customer-member-backdrop, .customer-crm-backdrop").forEach((node) => node.remove());
   const rawRoute = decodeURIComponent(location.hash.slice(1) || "home");
   const route = rawRoute === "portal" ? "portal/profile" : rawRoute;
+  if (route !== "portal/messages" && route !== "business/messages") void stopCommunicationCenterRealtime(supabase);
   const portalRoutes = ["portal/profile", "portal/home", "portal/orders", "portal/library", "portal/messages", "portal/partners", "portal/affiliates", "portal/workforce", "portal/communities", "portal/settings", "portal/create-business", "portal/onboarding", "portal/resolution", "portal/help", "portal/language", "portal/legal"];
   const isMemberCommunity = route.startsWith("portal/community/");
   const isBusinessRoute = route.startsWith("business/");
@@ -21659,6 +21807,7 @@ function renderAuthRoute() {
   if (isBusinessRoute) {
     renderBusinessPage(route);
     updateNav();
+    if (route === "business/messages") void loadCommunicationCenter(supabase, { business: getBusiness(), user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
     return;
   }
   if (route === "signup-creator" && currentUser) {
@@ -21677,6 +21826,7 @@ function renderAuthRoute() {
   if (portalRoutes.includes(route) || isMemberCommunity) {
     app.innerHTML = portalPage(isMemberCommunity ? route.slice("portal/".length) : route.split("/")[1]);
     if (isMemberCommunity) void loadCommunityFeed(supabase, route.slice("portal/community/".length));
+    if (route === "portal/messages") void loadCommunicationCenter(supabase, { business: null, user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
   }
   if (route === "forgot-password") app.innerHTML = `<div class="container page"><div class="form-shell"><span class="eyebrow">Account recovery</span><h1>Reset your password.</h1><p>We will email you a secure link to choose a new password.</p><form id="reset-request-form"><label class="form-field"><span>Email address</span><input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><button class="button button-dark" type="submit">Send reset link &rarr;</button></form><p class="auth-message" id="auth-message" role="status"></p><div class="form-foot"><a href="#login">Back to log in</a></div></div></div>`;
   if (route === "reset-password") app.innerHTML = `<div class="container page"><div class="form-shell"><span class="eyebrow">Account recovery</span><h1>Choose a new password.</h1><form id="new-password-form"><label class="form-field"><span>New password</span><input name="password" type="password" minlength="8" autocomplete="new-password" required></label><button class="button button-dark" type="submit">Update password &rarr;</button></form><p class="auth-message" id="auth-message" role="status"></p></div></div>`;
@@ -21702,7 +21852,7 @@ document.addEventListener("submit", async (event) => {
   const form = event.target;
   if (!(form instanceof HTMLFormElement)) return;
   const communityForm = form.matches("[data-community-post-form], [data-community-reply-form]");
-  if (!communityForm && !["auth-form", "edit-profile-form", "business-form", "portal-search-form", "reset-request-form", "new-password-form", "business-product-form", "access-code-form", "redeem-access-code-form", "customer-crm-form", "member-access-form", "member-block-form"].includes(form.id)) return;
+  if (!communityForm && !["auth-form", "edit-profile-form", "business-form", "portal-search-form", "reset-request-form", "new-password-form", "business-product-form", "access-code-form", "redeem-access-code-form", "customer-crm-form", "member-access-form", "member-block-form", "conversation-message-form"].includes(form.id)) return;
   event.preventDefault();
   if (!supabase) return status(initError || "Supabase is not configured.", true);
   const data = new FormData(form);
@@ -21716,7 +21866,12 @@ document.addEventListener("submit", async (event) => {
     setProductSaveState(form, "Saving product details\xE2\u20AC\xA6");
   }
   try {
-    if (form.id === "member-access-form") {
+    if (form.id === "conversation-message-form") {
+      await sendInboxMessage(supabase, { conversationId: form.dataset.conversationId, user: currentUser, body: data.get("body") });
+      const isBusinessInbox = location.hash.slice(1) === "business/messages";
+      await loadCommunicationCenter(supabase, { business: isBusinessInbox ? getBusiness() : null, user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
+      portalToast("Message sent.");
+    } else if (form.id === "member-access-form") {
       const businessId = form.dataset.businessId, customerId = form.dataset.customerId, productId = String(data.get("product_id") || ""), selectedResource = String(data.get("resource_id") || ""), reason = String(data.get("reason") || "").trim(), effect = event.submitter?.value === "revoke" ? "revoke" : "grant";
       const [resourceProductId, resourceId] = selectedResource ? selectedResource.split("::") : [productId, null];
       if (!productId || resourceProductId !== productId) throw new Error("Choose a resource from the selected program.");
@@ -22066,10 +22221,45 @@ document.addEventListener("click", async (event) => {
 }, true);
 document.addEventListener("click", async (event) => {
   const menu = document.querySelector("#portal-account-menu");
-  if (menu && !event.target.closest(".portal-top-actions")) menu.hidden = true;
-  const target = event.target.closest("[data-menu-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-crm], [data-customer-open], [data-member-entitlement-revoke], [data-member-entitlement-restore], [data-member-access-reset], [data-member-unblock], [data-resource-progress], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete]");
+  if (menu && !event.target.closest(".portal-top-actions")) {
+    menu.hidden = true;
+    document.querySelector("[data-menu-toggle]")?.setAttribute("aria-expanded", "false");
+  }
+  const target = event.target.closest("[data-menu-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-crm], [data-customer-open], [data-member-entitlement-revoke], [data-member-entitlement-restore], [data-member-access-reset], [data-member-unblock], [data-resource-progress], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete], [data-password-toggle], [data-inbox-open], [data-inbox-refresh], [data-message-customer]");
   if (!target) return;
   event.preventDefault();
+  if (target.matches("[data-password-toggle]")) {
+    const input = target.closest(".auth-input-wrap")?.querySelector("input");
+    if (input) {
+      const reveal = input.type === "password";
+      input.type = reveal ? "text" : "password";
+      target.setAttribute("aria-label", reveal ? "Hide password" : "Show password");
+      target.classList.toggle("is-visible", reveal);
+    }
+    return;
+  }
+  if (target.matches("[data-inbox-open]")) {
+    selectInboxConversation(target.dataset.inboxOpen);
+    await loadCommunicationCenter(supabase, { business: location.hash.slice(1) === "business/messages" ? getBusiness() : null, user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
+    return;
+  }
+  if (target.matches("[data-inbox-refresh]")) {
+    target.disabled = true;
+    await loadCommunicationCenter(supabase, { business: location.hash.slice(1) === "business/messages" ? getBusiness() : null, user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
+    return;
+  }
+  if (target.matches("[data-message-customer]")) {
+    try {
+      await createCustomerConversation(supabase, { businessId: target.dataset.businessId || getBusiness()?.id, customerId: target.dataset.messageCustomer, user: currentUser });
+      document.querySelector(".customer-member-backdrop")?.remove();
+      if (location.hash.slice(1) === "business/messages") await loadCommunicationCenter(supabase, { business: getBusiness(), user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
+      else location.hash = "business/messages";
+      portalToast("Private conversation opened.");
+    } catch (error) {
+      portalToast(error?.message || "Could not open a conversation with this customer.");
+    }
+    return;
+  }
   if (target.matches("[data-customer-download]")) {
     const path = target.dataset.customerDownload, name = (target.dataset.downloadName || "cohort-download").replace(/[^a-zA-Z0-9._-]+/g, "-");
     target.disabled = true;
@@ -22247,6 +22437,7 @@ document.addEventListener("click", async (event) => {
     const panel = document.querySelector("#portal-account-menu");
     panel.hidden = !panel.hidden;
     target.setAttribute("aria-expanded", String(!panel.hidden));
+    if (!panel.hidden) panel.querySelector("a,button")?.focus({ preventScroll: true });
     return;
   }
   if (target.matches("[data-theme]")) {
@@ -22522,6 +22713,27 @@ document.addEventListener("click", async (event) => {
     }
   }
 }, true);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    const menu = document.querySelector("#portal-account-menu");
+    if (menu && !menu.hidden) {
+      menu.hidden = true;
+      const toggle = document.querySelector("[data-menu-toggle]");
+      toggle?.setAttribute("aria-expanded", "false");
+      toggle?.focus();
+    }
+    document.querySelector(".portal-modal-backdrop")?.remove();
+  }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+    const search = document.querySelector("#portal-search-form input,#search-toggle");
+    if (search) {
+      event.preventDefault();
+      if (search.id === "search-toggle") {
+        location.hash = "explore";
+      } else search.focus();
+    }
+  }
+});
 document.addEventListener("change", (event) => {
   const target = event.target;
   if (target.matches("[data-analytics-choice]")) {
