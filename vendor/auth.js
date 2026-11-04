@@ -21021,7 +21021,7 @@ function businessCustomers(business, activeCustomerTab2) {
   const list = activeCustomerTab2 === "Customers" ? customers : activeCustomerTab2 === "Memberships" ? memberships : [];
   const empty = activeCustomerTab2 === "Customers" ? "No customers yet" : activeCustomerTab2 === "Memberships" ? "No memberships yet" : "No people added";
   const sub = activeCustomerTab2 === "Customers" ? "Buyers from your orders appear here. Keep private notes and tags to remember what matters." : activeCustomerTab2 === "Memberships" ? "Member access is shown from active and past product entitlements." : "Team invitations are not available yet.";
-  const headers = activeCustomerTab2 === "Customers" ? ["Customer", "Email", "Tags", "Status", "Country", "Total spend", "Joined at", "Last accessed", "CRM"] : activeCustomerTab2 === "Memberships" ? ["Member", "Email", "Plan", "Status", "Price", "Started", "Access"] : ["Person", "Email", "Role", "Status", "Added"];
+  const headers = activeCustomerTab2 === "Customers" ? ["Customer", "Email", "Tags", "Status", "Country", "Total spend", "Joined at", "CRM"] : activeCustomerTab2 === "Memberships" ? ["Member", "Email", "Plan", "Status", "Price", "Started", "Access"] : ["Person", "Email", "Role", "Status", "Added"];
   return `${businessHeading2("RELATIONSHIPS", "Customers", "Keep track of buyers, membership access, and the follow-up each person needs.")}
     <div class="customer-tabs" role="tablist" aria-label="Business relationships">${["Customers", "Memberships", "People"].map((tab) => `<button type="button" role="tab" aria-selected="${activeCustomerTab2 === tab}" class="${activeCustomerTab2 === tab ? "selected" : ""}" data-customer-tab="${tab}">${tab}</button>`).join("")}</div>
     <div class="customer-page-title"><div><h2>${activeCustomerTab2}</h2><p>${activeCustomerTab2 === "Customers" ? `${customers.length} ${customers.length === 1 ? "buyer" : "buyers"} across your business` : activeCustomerTab2 === "Memberships" ? `${memberships.length} membership records` : "Invite teammates to help manage your business"}</p></div></div>
@@ -21037,14 +21037,14 @@ function businessCustomers(business, activeCustomerTab2) {
     const crm = person.relationship;
     const tags = crm?.tags || [];
     const date = person.joinedAt || person.startedAt;
-    const dateLabel = date ? new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "\u2014";
+    const dateLabel = date ? new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" }) : "\u2014";
     const crmButton = `<button class="customer-crm-edit" type="button" data-customer-crm="${escapeHTML2(person.buyerId)}" aria-label="Edit notes and tags for ${escapeHTML2(person.name)}">${crm?.note || tags.length ? "Edit details" : "+ Add details"}</button>`;
     return `<tr data-customer-date="${escapeHTML2(date || "")}" data-customer-tags="${escapeHTML2(tags.join(" ").toLowerCase())}" data-customer-note="${escapeHTML2(crm?.note || "")}" data-customer-demo="${person.isDemo ? "true" : "false"}">
           <td><b>${escapeHTML2(person.name)}</b>${person.isDemo ? '<small class="demo-record-label">DEMO DATA</small>' : ""}</td>
           <td>${escapeHTML2(person.email)}</td>
           ${activeCustomerTab2 === "Customers" ? `<td class="customer-tag-cell">${tags.length ? tags.map((tag) => `<span class="customer-tag">${escapeHTML2(tag)}</span>`).join("") : '<span class="customer-no-tags">\u2014</span>'}</td>` : ""}
           <td><span class="customer-status-pill">${escapeHTML2(person.status)}</span></td>
-          ${activeCustomerTab2 === "Customers" ? `<td>${escapeHTML2(person.country)}</td><td>\u20B9${Number(person.totalSpend).toLocaleString("en-IN")}</td><td>${dateLabel}</td><td>\u2014</td><td>${crmButton}</td>` : activeCustomerTab2 === "Memberships" ? `<td>${escapeHTML2(person.plan)}</td><td>${escapeHTML2(person.status)}</td><td>\u20B9${Number(person.price).toLocaleString("en-IN")}</td><td>${dateLabel}</td><td>${person.renewsAt ? new Date(person.renewsAt).toLocaleDateString("en-IN") : "No expiry"}</td>` : "<td>\u2014</td><td>\u2014</td><td>\u2014</td>"}
+          ${activeCustomerTab2 === "Customers" ? `<td>${escapeHTML2(person.country)}</td><td>\u20B9${Number(person.totalSpend).toLocaleString("en-IN")}</td><td>${dateLabel}</td><td>${crmButton}</td>` : activeCustomerTab2 === "Memberships" ? `<td>${escapeHTML2(person.plan)}</td><td>${escapeHTML2(person.status)}</td><td>\u20B9${Number(person.price).toLocaleString("en-IN")}</td><td>${dateLabel}</td><td>${person.renewsAt ? new Date(person.renewsAt).toLocaleDateString("en-IN") : "No expiry"}</td>` : "<td>\u2014</td><td>\u2014</td><td>\u2014</td>"}
         </tr>`;
   }).join("")}
     </tbody></table>${list.length ? "" : `<div class="customer-empty"><span>\u25EF</span><b>${empty}</b><p>${sub}</p>${activeCustomerTab2 === "Customers" ? '<a class="text-link" href="#business/products">View products \u2192</a>' : ""}</div>`}</div>`;

@@ -59,7 +59,7 @@ function businessCustomers(business, activeCustomerTab) {
       ? 'Member access is shown from active and past product entitlements.'
       : 'Team invitations are not available yet.';
   const headers = activeCustomerTab === 'Customers'
-    ? ['Customer', 'Email', 'Tags', 'Status', 'Country', 'Total spend', 'Joined at', 'Last accessed', 'CRM']
+    ? ['Customer', 'Email', 'Tags', 'Status', 'Country', 'Total spend', 'Joined at', 'CRM']
     : activeCustomerTab === 'Memberships'
       ? ['Member', 'Email', 'Plan', 'Status', 'Price', 'Started', 'Access']
       : ['Person', 'Email', 'Role', 'Status', 'Added'];
@@ -79,7 +79,7 @@ function businessCustomers(business, activeCustomerTab) {
         const crm = person.relationship;
         const tags = crm?.tags || [];
         const date = person.joinedAt || person.startedAt;
-        const dateLabel = date ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+        const dateLabel = date ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) : '—';
         const crmButton = `<button class="customer-crm-edit" type="button" data-customer-crm="${escapeHTML(person.buyerId)}" aria-label="Edit notes and tags for ${escapeHTML(person.name)}">${crm?.note || tags.length ? 'Edit details' : '+ Add details'}</button>`;
         return `<tr data-customer-date="${escapeHTML(date || '')}" data-customer-tags="${escapeHTML(tags.join(' ').toLowerCase())}" data-customer-note="${escapeHTML(crm?.note || '')}" data-customer-demo="${person.isDemo ? 'true' : 'false'}">
           <td><b>${escapeHTML(person.name)}</b>${person.isDemo ? '<small class="demo-record-label">DEMO DATA</small>' : ''}</td>
@@ -87,7 +87,7 @@ function businessCustomers(business, activeCustomerTab) {
           ${activeCustomerTab === 'Customers' ? `<td class="customer-tag-cell">${tags.length ? tags.map(tag => `<span class="customer-tag">${escapeHTML(tag)}</span>`).join('') : '<span class="customer-no-tags">—</span>'}</td>` : ''}
           <td><span class="customer-status-pill">${escapeHTML(person.status)}</span></td>
           ${activeCustomerTab === 'Customers'
-            ? `<td>${escapeHTML(person.country)}</td><td>₹${Number(person.totalSpend).toLocaleString('en-IN')}</td><td>${dateLabel}</td><td>—</td><td>${crmButton}</td>`
+            ? `<td>${escapeHTML(person.country)}</td><td>₹${Number(person.totalSpend).toLocaleString('en-IN')}</td><td>${dateLabel}</td><td>${crmButton}</td>`
             : activeCustomerTab === 'Memberships'
               ? `<td>${escapeHTML(person.plan)}</td><td>${escapeHTML(person.status)}</td><td>₹${Number(person.price).toLocaleString('en-IN')}</td><td>${dateLabel}</td><td>${person.renewsAt ? new Date(person.renewsAt).toLocaleDateString('en-IN') : 'No expiry'}</td>`
               : '<td>—</td><td>—</td><td>—</td>'}
