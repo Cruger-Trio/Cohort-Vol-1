@@ -116,7 +116,7 @@ export async function loadWorkspaceData(supabase, user) {
       supabase.from('product_access_codes').select('id,product_id,business_id,label,code_hint,max_redemptions,redemption_count,access_days,expires_at,disabled_at,created_at,products(name)').eq('business_id', workspace.business.id).order('created_at', { ascending: false }),
       supabase.from('customer_relationships').select('business_id,customer_id,tags,note,updated_at').eq('business_id', workspace.business.id),
       supabase.from('creator_audience_segments').select('id,business_id,created_by,name,filters,created_at,updated_at').eq('business_id', workspace.business.id).order('created_at', { ascending: true }),
-      supabase.from('customer_follow_ups').select('id,business_id,customer_id,created_by,title,notes,due_at,status,completed_at,created_at,updated_at').eq('business_id', workspace.business.id).order('due_at', { ascending: true }),
+      supabase.from('customer_follow_ups').select('id,business_id,customer_id,created_by,title,notes,due_at,status,completed_at,created_at,updated_at,events:customer_follow_up_events(id,message_id,outcome,created_at,message:creator_messages(body,conversation_id))').eq('business_id', workspace.business.id).order('due_at', { ascending: true }),
       supabase.from('business_customer_blocks').select('id,business_id,customer_id,reason,created_at').eq('business_id', workspace.business.id),
       supabase.from('customer_product_access').select('id,business_id,customer_id,product_id,resource_id,effect,reason,created_at,updated_at').eq('business_id', workspace.business.id),
       supabase.from('member_resource_progress').select('id,business_id,customer_id,product_id,resource_id,completed_at,updated_at').eq('business_id', workspace.business.id),

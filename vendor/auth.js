@@ -20919,7 +20919,7 @@ async function loadWorkspaceData(supabase2, user) {
         supabase2.from("product_access_codes").select("id,product_id,business_id,label,code_hint,max_redemptions,redemption_count,access_days,expires_at,disabled_at,created_at,products(name)").eq("business_id", workspace.business.id).order("created_at", { ascending: false }),
         supabase2.from("customer_relationships").select("business_id,customer_id,tags,note,updated_at").eq("business_id", workspace.business.id),
         supabase2.from("creator_audience_segments").select("id,business_id,created_by,name,filters,created_at,updated_at").eq("business_id", workspace.business.id).order("created_at", { ascending: true }),
-        supabase2.from("customer_follow_ups").select("id,business_id,customer_id,created_by,title,notes,due_at,status,completed_at,created_at,updated_at").eq("business_id", workspace.business.id).order("due_at", { ascending: true }),
+        supabase2.from("customer_follow_ups").select("id,business_id,customer_id,created_by,title,notes,due_at,status,completed_at,created_at,updated_at,events:customer_follow_up_events(id,message_id,outcome,created_at,message:creator_messages(body,conversation_id))").eq("business_id", workspace.business.id).order("due_at", { ascending: true }),
         supabase2.from("business_customer_blocks").select("id,business_id,customer_id,reason,created_at").eq("business_id", workspace.business.id),
         supabase2.from("customer_product_access").select("id,business_id,customer_id,product_id,resource_id,effect,reason,created_at,updated_at").eq("business_id", workspace.business.id),
         supabase2.from("member_resource_progress").select("id,business_id,customer_id,product_id,resource_id,completed_at,updated_at").eq("business_id", workspace.business.id),
@@ -21033,6 +21033,22 @@ function savePricingOptionDialog(card, modal) {
   card.dataset.unlimited = settings.stock === "";
   const cadence = settings.cadence = val("[data-dialog-cadence]")?.value || "once", amount = Number(val("[data-dialog-amount]")?.value || 0), summary = card.querySelector(".pricing-summary");
   if (summary) summary.innerHTML = `${escapeHTML(cadence === "once" ? "One-time" : cadence)} &middot; &#8377;${amount.toLocaleString("en-IN")}`;
+}
+
+// src/portal/followups.js
+var followUpOutcomes = {
+  awaiting_reply: "Awaiting reply",
+  resolved: "Resolved",
+  needs_follow_up: "Needs another follow-up"
+};
+function followUpComposer(task, escapeHTML7) {
+  if (!task) return "";
+  return `<div class="inbox-followup-context"><div><small>LINKED FOLLOW-UP</small><b>${escapeHTML7(task.title)}</b></div><label>After sending<select name="follow_up_outcome" required>${Object.entries(followUpOutcomes).map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select></label><p>Awaiting reply pauses this reminder. Resolved closes it. Needs another follow-up keeps it in your queue.</p></div>`;
+}
+function followUpHistory(task, escapeHTML7) {
+  const events = [...task.events || []].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  if (!events.length) return "";
+  return `<details class="followup-history"><summary>${escapeHTML7(followUpOutcomes[events[0].outcome] || "Contact recorded")} \xB7 ${events.length} linked ${events.length === 1 ? "reply" : "replies"}</summary>${events.map((event) => `<article><header><b>${escapeHTML7(followUpOutcomes[event.outcome] || "Contact recorded")}</b><time>${escapeHTML7(new Date(event.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }))}</time></header><p>${escapeHTML7(event.message?.body || "Message unavailable")}</p>${event.message?.conversation_id ? `<button type="button" class="portal-action" data-follow-up-conversation="${escapeHTML7(event.message.conversation_id)}">Open conversation</button>` : ""}</article>`).join("")}</details>`;
 }
 
 // src/portal/business/customers.js
@@ -21159,7 +21175,7 @@ function businessCustomers(business, activeCustomerTab2, savedSegments = []) {
   const overdue = openFollowUps.filter((task) => new Date(task.due_at) < /* @__PURE__ */ new Date() && new Date(task.due_at).toDateString() !== (/* @__PURE__ */ new Date()).toDateString()).length;
   const followUpQueue = activeCustomerTab2 === "Customers" ? `<section class="followup-queue" aria-labelledby="followup-queue-title">
     <div class="followup-queue-head"><span class="followup-queue-icon" aria-hidden="true">\u2197</span><div><h3 id="followup-queue-title">Follow-up queue</h3><p>Your next conversations, organized by due date.</p></div><div class="followup-queue-count"><b>${openFollowUps.length}</b><span>open</span></div></div>
-    ${openFollowUps.length ? `<div class="followup-queue-list">${openFollowUps.slice(0, 4).map((task) => `<article class="followup-queue-item"><div><b>${escapeHTML2(task.title)}</b><small>${escapeHTML2(customerLabel(task.customer_id))} \xB7 ${escapeHTML2(when(task.due_at))}${new Date(task.due_at) < /* @__PURE__ */ new Date() ? " \xB7 Overdue" : ""}</small></div><div><button type="button" class="portal-action" data-customer-open="${escapeHTML2(task.customer_id)}">Open</button><button type="button" class="portal-action" data-follow-up-message="${escapeHTML2(task.customer_id)}" data-follow-up-title="${escapeHTML2(task.title)}" data-follow-up-customer="${escapeHTML2(customerLabel(task.customer_id))}">Draft message</button><button type="button" class="portal-action followup-done-button" data-follow-up-done="${escapeHTML2(task.id)}">Done</button></div></article>`).join("")}${openFollowUps.length > 4 ? `<p class="followup-queue-more">And ${openFollowUps.length - 4} more open ${openFollowUps.length - 4 === 1 ? "follow-up" : "follow-ups"}</p>` : ""}</div>` : '<p class="followup-queue-empty">No follow-ups yet. Add a reminder from any customer profile.</p>'}
+    ${openFollowUps.length ? `<div class="followup-queue-list">${openFollowUps.slice(0, 4).map((task) => `<article class="followup-queue-item"><div><b>${escapeHTML2(task.title)}</b><small>${escapeHTML2(customerLabel(task.customer_id))} \xB7 ${escapeHTML2(when(task.due_at))}${new Date(task.due_at) < /* @__PURE__ */ new Date() ? " \xB7 Overdue" : ""}</small></div><div><button type="button" class="portal-action" data-customer-open="${escapeHTML2(task.customer_id)}">Open</button><button type="button" class="portal-action" data-follow-up-id="${escapeHTML2(task.id)}" data-follow-up-message="${escapeHTML2(task.customer_id)}" data-follow-up-title="${escapeHTML2(task.title)}" data-follow-up-customer="${escapeHTML2(customerLabel(task.customer_id))}">Draft message</button><button type="button" class="portal-action followup-done-button" data-follow-up-done="${escapeHTML2(task.id)}">Done</button></div></article>`).join("")}${openFollowUps.length > 4 ? `<p class="followup-queue-more">And ${openFollowUps.length - 4} more open ${openFollowUps.length - 4 === 1 ? "follow-up" : "follow-ups"}</p>` : ""}</div>` : '<p class="followup-queue-empty">No follow-ups yet. Add a reminder from any customer profile.</p>'}
     <div class="followup-queue-meta"><span>${dueToday} due today</span><span>${overdue} overdue</span></div>
   </section>` : "";
   const audienceWorkbench = activeCustomerTab2 === "Customers" ? `<section class="audience-workbench" aria-labelledby="audience-heading">
@@ -21292,7 +21308,7 @@ function customerMemberDialog(business, customerId, personName) {
   const dueDate = new Date(Date.now() + 864e5);
   dueDate.setMinutes(dueDate.getMinutes() - dueDate.getTimezoneOffset());
   const dueDateDefault = dueDate.toISOString().slice(0, 16);
-  const followUpRows = customerFollowUps.length ? customerFollowUps.map((task) => `<article class="customer-followup-row ${task.status === "done" ? "is-done" : ""}"><div><b>${escapeHTML2(task.title)}</b><small>${escapeHTML2(when(task.due_at))}${task.notes ? ` \xB7 ${escapeHTML2(task.notes)}` : ""}</small></div><span class="customer-followup-state ${task.status}">${task.status === "done" ? "Done" : task.status === "cancelled" ? "Cancelled" : new Date(task.due_at) < /* @__PURE__ */ new Date() ? "Overdue" : "Open"}</span>${task.status === "open" ? `<button type="button" class="portal-action" data-follow-up-done="${escapeHTML2(task.id)}">Mark done</button>` : ""}</article>`).join("") : '<p class="customer-empty-note">No follow-ups scheduled for this customer.</p>';
+  const followUpRows = customerFollowUps.length ? customerFollowUps.map((task) => `<article class="customer-followup-row ${task.status === "done" ? "is-done" : ""}"><div><b>${escapeHTML2(task.title)}</b><small>${escapeHTML2(when(task.due_at))}${task.notes ? ` \xB7 ${escapeHTML2(task.notes)}` : ""}</small></div><span class="customer-followup-state ${task.status}">${task.status === "done" ? "Done" : task.status === "cancelled" ? "Cancelled" : task.status === "waiting" ? "Awaiting reply" : new Date(task.due_at) < /* @__PURE__ */ new Date() ? "Overdue" : "Open"}</span>${task.status === "open" ? `<button type="button" class="portal-action" data-follow-up-done="${escapeHTML2(task.id)}">Mark done</button>` : task.status === "waiting" || task.status === "done" ? `<button type="button" class="portal-action" data-follow-up-reopen="${escapeHTML2(task.id)}">Reopen</button>` : ""}${followUpHistory(task, escapeHTML2)}</article>`).join("") : '<p class="customer-empty-note">No follow-ups scheduled for this customer.</p>';
   const backdrop = document.createElement("div");
   backdrop.className = "portal-modal-backdrop customer-member-backdrop";
   backdrop.innerHTML = `<section class="portal-modal customer-member-modal" data-customer-id="${escapeHTML2(customerId)}" role="dialog" aria-modal="true" aria-labelledby="member-title">
@@ -21306,7 +21322,7 @@ function customerMemberDialog(business, customerId, personName) {
       <section class="member-detail-card"><h3>Member safety</h3>${block ? `<p>This customer is blocked from all programs in this business since ${escapeHTML2(when(block.created_at))}.${block.reason ? ` Reason: ${escapeHTML2(block.reason)}` : ""}</p><button type="button" class="portal-action" data-member-unblock="${escapeHTML2(block.id)}">Restore business access</button>` : `<p>Block this customer from all of your programs and private resources.</p><form id="member-block-form" data-member-block-form data-business-id="${escapeHTML2(business.id)}" data-customer-id="${escapeHTML2(customerId)}"><label>Reason (optional)<input name="reason" maxlength="500" placeholder="e.g. repeated abuse of community rules"></label><button type="submit" class="portal-action danger-action">Block from all programs</button><p class="auth-message" role="status"></p></form>`}</section>
       <section class="member-detail-card"><h3>Order history</h3><div class="member-history-list">${historyRows}</div></section>
       <section class="member-detail-card"><h3>Activity timeline</h3><p>Last activity is based on recorded resource completions and community replies.</p><div class="member-history-list">${activityRows}</div></section>
-      <section class="member-detail-card customer-followup-card"><div class="customer-followup-heading"><div><h3>Follow-up reminders</h3><p>Private reminders for your team. Nothing sends automatically.</p></div><span>${customerFollowUps.filter((task) => task.status === "open").length} open</span></div><div class="customer-followup-list">${followUpRows}</div><form id="customer-follow-up-form" class="customer-followup-form" data-business-id="${escapeHTML2(business.id)}" data-customer-id="${escapeHTML2(customerId)}"><label>What should you follow up on?<input name="title" maxlength="100" required placeholder="e.g. Check in on week one progress"></label><div class="customer-followup-form-grid"><label>Due date<input type="datetime-local" name="due_at" value="${dueDateDefault}" required></label><label>Private note <small>Optional</small><input name="notes" maxlength="1000" placeholder="Context for this follow-up"></label></div><button class="portal-action" type="submit">Add reminder</button><p class="auth-message" role="status"></p></form></section>
+      <section class="member-detail-card customer-followup-card"><div class="customer-followup-heading"><div><h3>Follow-up reminders</h3><p>Private reminders for your team. Nothing sends automatically.</p></div><span>${customerFollowUps.filter((task) => task.status === "open").length} open \xB7 ${customerFollowUps.filter((task) => task.status === "waiting").length} awaiting reply</span></div><div class="customer-followup-list">${followUpRows}</div><form id="customer-follow-up-form" class="customer-followup-form" data-business-id="${escapeHTML2(business.id)}" data-customer-id="${escapeHTML2(customerId)}"><label>What should you follow up on?<input name="title" maxlength="100" required placeholder="e.g. Check in on week one progress"></label><div class="customer-followup-form-grid"><label>Due date<input type="datetime-local" name="due_at" value="${dueDateDefault}" required></label><label>Private note <small>Optional</small><input name="notes" maxlength="1000" placeholder="Context for this follow-up"></label></div><button class="portal-action" type="submit">Add reminder</button><p class="auth-message" role="status"></p></form></section>
     </div>
   </section>`;
   backdrop.addEventListener("click", (event) => {
@@ -21569,6 +21585,8 @@ async function loadCommunityFeed(supabase2, productId) {
 }
 
 // src/portal/messaging.js
+var attachedFollowUp = null;
+var inboxLoadSequence = 0;
 var selectedConversationId = null;
 var pendingDraft = null;
 var realtimeChannel = null;
@@ -21636,7 +21654,8 @@ function renderMessages(messages, userId, escapeHTML7, initialsFor3, counterpart
 }
 async function loadCommunicationCenter(supabase2, { business = null, user, escapeHTML: escapeHTML7 = safe, initialsFor: initialsFor3 = (value) => String(value || "?").slice(0, 1).toUpperCase() } = {}) {
   const shell = document.querySelector("#inbox-shell");
-  if (!shell || !supabase2 || !user) return;
+  if (!shell || !supabase2 || !user || shell.querySelector("#conversation-message-form")?.dataset.saving === "true") return;
+  const request = ++inboxLoadSequence;
   const creatorMode = Boolean(business && business.owner_id === user.id);
   const contextKey = creatorMode ? `creator:${business.id}` : `customer:${user.id}`;
   try {
@@ -21669,8 +21688,26 @@ async function loadCommunicationCenter(supabase2, { business = null, user, escap
     const counterpart = selected ? participantName(selected, creatorMode) : "";
     const rowsMarkup = rows.length ? rows.map((row) => messageListItem(row, creatorMode, selectedConversationId, user.id, escapeHTML7, initialsFor3)).join("") : `<div class="inbox-list-empty"><span class="inbox-empty-icon">${creatorMode ? "\u2197" : "\u2733"}</span><b>${creatorMode ? "Your inbox is ready" : "No messages yet"}</b><p>${creatorMode ? "Open a customer profile and choose Message customer to start a private thread." : "When a creator starts a conversation with you, it will appear here."}</p>${creatorMode ? '<a href="#business/customers">Open customers</a>' : '<a href="#explore">Explore the marketplace</a>'}</div>`;
     const conversationMarkup = selected ? `<header class="inbox-conversation-head"><span class="inbox-avatar">${selected[creatorMode ? "customer" : "creator"]?.avatar_url ? `<img src="${escapeHTML7(selected[creatorMode ? "customer" : "creator"].avatar_url)}" alt="">` : escapeHTML7(initialsFor3(counterpart))}</span><span><b>${escapeHTML7(counterpart)}</b><small>${escapeHTML7(creatorMode ? selected.customer?.username ? `@${selected.customer.username}` : "Customer" : selected.business?.name || "Creator")}</small></span><span class="inbox-thread-status"><i></i> Private conversation</span></header><div class="inbox-message-list" id="inbox-message-list">${renderMessages(messages, user.id, escapeHTML7, initialsFor3, counterpart)}</div>${creatorMode ? `<div class="message-template-toolbar"><label><span>Saved reply</span><select id="message-template-select" aria-label="Choose a saved reply"><option value="">${templates.length ? "Select a saved reply" : "No saved replies yet"}</option>${templates.map((template) => `<option value="${escapeHTML7(template.id)}">${escapeHTML7(template.name)}</option>`).join("")}</select></label><button type="button" class="portal-action" data-template-insert ${templates.length ? "" : "disabled"}>Insert</button><button type="button" class="portal-action" data-template-save>Save draft</button><button type="button" class="portal-action" data-template-manage>Manage</button></div>` : ""}<form class="inbox-compose" id="conversation-message-form" data-conversation-id="${escapeHTML7(selected.id)}"><label class="inbox-sr-only" for="inbox-message-input">Write a message</label><textarea id="inbox-message-input" name="body" rows="1" maxlength="4000" placeholder="Write a message\u2026" required></textarea><div class="inbox-compose-footer"><span>Direct message \xB7 Be kind and clear</span><button class="button button-primary" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg><span>Send</span></button></div></form>` : `<div class="inbox-select-empty"><span class="inbox-empty-icon">\u2709</span><b>Select a conversation</b><p>Choose a thread from the list to read and reply.</p></div>`;
+    if (request !== inboxLoadSequence || !shell.isConnected) return;
+    const previousForm = shell.querySelector("#conversation-message-form");
+    if (previousForm?.dataset.saving === "true") return;
+    const savedComposer = previousForm && selected && previousForm.dataset.conversationId === selected.id ? {
+      body: previousForm.querySelector('[name="body"]')?.value || "",
+      outcome: previousForm.querySelector('[name="follow_up_outcome"]')?.value,
+      messageId: previousForm.dataset.messageId
+    } : null;
     shell._messageTemplates = templates;
     shell.innerHTML = `<aside class="inbox-list-panel"><div class="inbox-list-toolbar"><label class="inbox-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" id="inbox-search" placeholder="Search conversations" aria-label="Search conversations"></label><button class="inbox-refresh" type="button" data-inbox-refresh aria-label="Refresh inbox" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></svg></button></div><div class="inbox-thread-list">${rowsMarkup}</div></aside><section class="inbox-conversation-panel">${conversationMarkup}</section>`;
+    const composeForm = shell.querySelector("#conversation-message-form");
+    if (composeForm && creatorMode && attachedFollowUp?.conversationId === selected?.id) {
+      composeForm.dataset.followUpId = attachedFollowUp.id;
+      composeForm.insertAdjacentHTML("afterbegin", followUpComposer(attachedFollowUp, escapeHTML7));
+      if (savedComposer?.outcome) composeForm.elements.follow_up_outcome.value = savedComposer.outcome;
+    }
+    if (composeForm && savedComposer) {
+      composeForm.elements.body.value = savedComposer.body;
+      if (savedComposer.messageId) composeForm.dataset.messageId = savedComposer.messageId;
+    }
     if (pendingDraft?.conversationId === selected?.id) {
       const composer = shell.querySelector("#inbox-message-input");
       if (composer) {
@@ -21706,6 +21743,9 @@ async function loadCommunicationCenter(supabase2, { business = null, user, escap
   }
 }
 async function createCustomerConversation(supabase2, { businessId, customerId, user }) {
+  attachedFollowUp = null;
+  pendingDraft = null;
+  inboxLoadSequence++;
   const existing = await supabase2.from("creator_conversations").select("id").eq("business_id", businessId).eq("customer_id", customerId).maybeSingle();
   if (existing.error) throw existing.error;
   if (existing.data) {
@@ -21726,19 +21766,25 @@ async function createCustomerConversation(supabase2, { businessId, customerId, u
   selectedConversationId = created.data.id;
   return created.data.id;
 }
-async function sendInboxMessage(supabase2, { conversationId, user, body }) {
+async function sendInboxMessage(supabase2, { conversationId, user, body, followUpId = null, outcome = null, messageId = null }) {
   const text = String(body || "").trim();
   if (!text) throw new Error("Write a message before sending.");
   if (text.length > 4e3) throw new Error("Keep messages under 4,000 characters.");
-  const { error } = await supabase2.from("creator_messages").insert({ conversation_id: conversationId, sender_id: user.id, body: text });
+  const result = followUpId ? await supabase2.rpc("send_creator_follow_up_reply", { p_conversation_id: conversationId, p_follow_up_id: followUpId, p_body: text, p_outcome: outcome, p_message_id: messageId }) : await supabase2.from("creator_messages").insert({ conversation_id: conversationId, sender_id: user.id, body: text });
+  const { error } = result;
   if (error) throw error;
   selectedConversationId = conversationId;
+  attachedFollowUp = null;
+  pendingDraft = null;
 }
-function selectInboxConversation(id, draft = null) {
+function selectInboxConversation(id, draft = null, followUp = null) {
+  inboxLoadSequence++;
+  attachedFollowUp = followUp?.id && id ? { ...followUp, conversationId: id } : id === selectedConversationId ? attachedFollowUp : null;
   selectedConversationId = id || null;
   pendingDraft = draft && id ? { conversationId: id, body: String(draft) } : null;
 }
 async function stopCommunicationCenterRealtime(supabase2) {
+  inboxLoadSequence++;
   if (realtimeChannel && supabase2) await supabase2.removeChannel(realtimeChannel);
   realtimeChannel = null;
   realtimeKey = "";
@@ -21776,7 +21822,7 @@ function businessNotificationMarkup(workspace2, escapeHTML7 = escapeDefault) {
       const name = person.full_name || (person.username ? `@${person.username}` : "Customer");
       return `<a class="notification-row" href="#business/messages"><span class="notification-row-icon message">\u2709</span><span><b>New message from ${escapeHTML7(name)}</b><small>${escapeHTML7(message.body.slice(0, 86))}${message.body.length > 86 ? "\u2026" : ""}</small></span><time>${escapeHTML7(new Date(message.created_at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }))}</time></a>`;
     }),
-    ...tasks.slice(0, 6).map((task) => `<button class="notification-row notification-followup-action" type="button" data-follow-up-message="${escapeHTML7(task.customer_id)}" data-follow-up-title="${escapeHTML7(task.title)}" data-follow-up-customer="${escapeHTML7(customerName(task, workspace2))}"><span class="notification-row-icon followup">\u2197</span><span><b>${escapeHTML7(task.title)}</b><small>${escapeHTML7(customerName(task, workspace2))} \xB7 ${escapeHTML7(timeLabel(task.due_at))}</small></span><span class="notification-row-cta">Draft</span></button>`)
+    ...tasks.slice(0, 6).map((task) => `<button class="notification-row notification-followup-action" type="button" data-follow-up-id="${escapeHTML7(task.id)}" data-follow-up-message="${escapeHTML7(task.customer_id)}" data-follow-up-title="${escapeHTML7(task.title)}" data-follow-up-customer="${escapeHTML7(customerName(task, workspace2))}"><span class="notification-row-icon followup">\u2197</span><span><b>${escapeHTML7(task.title)}</b><small>${escapeHTML7(customerName(task, workspace2))} \xB7 ${escapeHTML7(timeLabel(task.due_at))}</small></span><span class="notification-row-cta">Draft</span></button>`)
   ];
   const content = rows.length ? rows.join("") : '<div class="notification-empty"><span>\u2713</span><b>You\u2019re all caught up</b><small>New customer messages and follow-ups due today will appear here.</small></div>';
   return `<div class="business-notifications"><button class="portal-icon-button notification-toggle" id="business-notification-toggle" data-notification-toggle aria-label="Notifications${count ? `, ${count} unread or due` : ""}" aria-expanded="false" aria-haspopup="true" aria-controls="business-notification-panel" title="Notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>${count ? `<span class="notification-count" id="business-notification-count">${count > 9 ? "9+" : count}</span>` : ""}</button><section class="business-notification-panel" id="business-notification-panel" aria-label="Notifications" hidden><header><span><b>Notifications</b><small>${count ? `${messages.length} unread message${messages.length === 1 ? "" : "s"} \xB7 ${tasks.length} follow-up${tasks.length === 1 ? "" : "s"} due` : "No new activity"}</small></span><a href="#business/messages">Open inbox</a></header><div class="notification-list">${content}</div><footer><a href="#business/customers">View follow-ups</a><a href="#business/messages">View inbox</a></footer></section></div>`;
@@ -21820,6 +21866,10 @@ var escapeHTML6 = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => (
 var supabase;
 var currentUser = null;
 var initError = "";
+function refreshBusinessNotifications() {
+  const node = document.querySelector(".business-notifications");
+  if (node) node.outerHTML = businessNotificationMarkup(workspace, escapeHTML6);
+}
 function updateNav() {
   const actions = document.querySelector(".nav-actions");
   if (!actions) return;
@@ -22159,10 +22209,28 @@ document.addEventListener("submit", async (event) => {
       renderAuthRoute();
       portalToast("Audience segment saved.");
     } else if (form.id === "conversation-message-form") {
-      await sendInboxMessage(supabase, { conversationId: form.dataset.conversationId, user: currentUser, body: data.get("body") });
+      const followUpId = form.dataset.followUpId || null;
+      const outcome = data.get("follow_up_outcome");
+      form.dataset.messageId ||= crypto.randomUUID();
+      form.querySelectorAll("textarea,select").forEach((input) => {
+        input.disabled = true;
+      });
+      await sendInboxMessage(supabase, { conversationId: form.dataset.conversationId, user: currentUser, body: data.get("body"), followUpId, outcome, messageId: form.dataset.messageId });
+      form.reset();
+      form.dataset.saving = "false";
+      delete form.dataset.messageId;
+      delete form.dataset.followUpId;
       const isBusinessInbox = location.hash.slice(1) === "business/messages";
       await loadCommunicationCenter(supabase, { business: isBusinessInbox ? getBusiness() : null, user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
-      portalToast("Message sent.");
+      portalToast(followUpId ? "Reply sent and follow-up outcome saved." : "Message sent.");
+      if (followUpId) {
+        try {
+          await loadWorkspaceData(supabase, currentUser);
+          refreshBusinessNotifications();
+        } catch {
+          portalToast("Reply and outcome saved. Refresh to update the reminder list.");
+        }
+      }
     } else if (form.id === "member-access-form") {
       const businessId = form.dataset.businessId, customerId = form.dataset.customerId, productId = String(data.get("product_id") || ""), selectedResource = String(data.get("resource_id") || ""), reason = String(data.get("reason") || "").trim(), effect = event.submitter?.value === "revoke" ? "revoke" : "grant";
       const [resourceProductId, resourceId] = selectedResource ? selectedResource.split("::") : [productId, null];
@@ -22474,6 +22542,9 @@ document.addEventListener("submit", async (event) => {
       inline.classList.add("auth-error");
     } else showError(error);
   } finally {
+    if (form.id === "conversation-message-form") form.querySelectorAll("textarea,select").forEach((input) => {
+      input.disabled = false;
+    });
     if (form.id === "redeem-access-code-form") form.querySelector('[name="access_code"]')?.removeAttribute("disabled");
     form.dataset.saving = "false";
     if (button) {
@@ -22522,7 +22593,7 @@ document.addEventListener("click", async (event) => {
     notifications.hidden = true;
     document.querySelector("[data-notification-toggle]")?.setAttribute("aria-expanded", "false");
   }
-  const target = event.target.closest("[data-menu-toggle], [data-notification-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-crm], [data-customer-open], [data-audience-create], [data-audience-delete], [data-audience-filter], [data-follow-up-done], [data-follow-up-message], [data-member-entitlement-revoke], [data-member-entitlement-restore], [data-member-access-reset], [data-member-unblock], [data-resource-progress], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete], [data-password-toggle], [data-inbox-open], [data-inbox-refresh], [data-message-customer], [data-template-insert], [data-template-save], [data-template-manage], [data-template-edit], [data-template-delete], [data-template-new], [data-template-close]");
+  const target = event.target.closest("[data-menu-toggle], [data-notification-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-crm], [data-customer-open], [data-audience-create], [data-audience-delete], [data-audience-filter], [data-follow-up-done], [data-follow-up-message], [data-follow-up-reopen], [data-follow-up-conversation], [data-member-entitlement-revoke], [data-member-entitlement-restore], [data-member-access-reset], [data-member-unblock], [data-resource-progress], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete], [data-password-toggle], [data-inbox-open], [data-inbox-refresh], [data-message-customer], [data-template-insert], [data-template-save], [data-template-manage], [data-template-edit], [data-template-delete], [data-template-new], [data-template-close]");
   if (!target) return;
   event.preventDefault();
   if (target.matches("[data-notification-toggle]")) {
@@ -22565,13 +22636,36 @@ document.addEventListener("click", async (event) => {
     try {
       const customerName2 = target.dataset.followUpCustomer || "there", firstName = customerName2.split(/\s+/)[0], taskTitle = target.dataset.followUpTitle || "your program";
       const conversationId = await createCustomerConversation(supabase, { businessId: getBusiness()?.id, customerId: target.dataset.followUpMessage, user: currentUser });
-      selectInboxConversation(conversationId, `Hi ${firstName}, just checking in about ${taskTitle}. How are things going? Let me know if you need any help.`);
+      selectInboxConversation(conversationId, `Hi ${firstName}, just checking in about ${taskTitle}. How are things going? Let me know if you need any help.`, { id: target.dataset.followUpId, title: taskTitle });
       document.querySelector(".customer-member-backdrop")?.remove();
       if (location.hash.slice(1) === "business/messages") await loadCommunicationCenter(supabase, { business: getBusiness(), user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
       else location.hash = "business/messages";
       portalToast("Draft ready in your inbox. Review it before sending.");
     } catch (error) {
       portalToast(error?.message || "Could not prepare a message draft.");
+    }
+    return;
+  }
+  if (target.matches("[data-follow-up-conversation]")) {
+    selectInboxConversation(target.dataset.followUpConversation);
+    document.querySelector(".customer-member-backdrop")?.remove();
+    location.hash = "business/messages";
+    return;
+  }
+  if (target.matches("[data-follow-up-reopen]")) {
+    const task = workspace.customerFollowUps.find((row) => row.id === target.dataset.followUpReopen);
+    if (!task) return;
+    target.disabled = true;
+    try {
+      const { data: updated, error } = await supabase.from("customer_follow_ups").update({ status: "open", completed_at: null, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", task.id).eq("business_id", getBusiness()?.id).select("id").single();
+      if (error) throw error;
+      await loadWorkspaceData(supabase, currentUser);
+      document.querySelector(".customer-member-backdrop")?.remove();
+      customerMemberDialog(getBusiness(), task.customer_id, ordersCustomerName(task.customer_id));
+      portalToast("Reminder reopened.");
+    } catch (error) {
+      target.disabled = false;
+      portalToast(error.message || "Could not reopen reminder.");
     }
     return;
   }

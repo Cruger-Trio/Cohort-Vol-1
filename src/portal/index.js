@@ -29,6 +29,10 @@ const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({
 let supabase;
 let currentUser = null;
 let initError = '';
+function refreshBusinessNotifications() {
+  const node=document.querySelector('.business-notifications');
+  if(node)node.outerHTML=businessNotificationMarkup(workspace,escapeHTML);
+}
 function updateNav() {
   const actions = document.querySelector('.nav-actions');
   if (!actions) return;
@@ -250,10 +254,22 @@ document.addEventListener('submit', async event => {
       renderAuthRoute();
       portalToast('Audience segment saved.');
     } else if (form.id === 'conversation-message-form') {
-      await sendInboxMessage(supabase,{conversationId:form.dataset.conversationId,user:currentUser,body:data.get('body')});
+      const followUpId = form.dataset.followUpId || null;
+      const outcome = data.get('follow_up_outcome');
+      form.dataset.messageId ||= crypto.randomUUID();
+      form.querySelectorAll('textarea,select').forEach(input => { input.disabled = true; });
+      await sendInboxMessage(supabase,{conversationId:form.dataset.conversationId,user:currentUser,body:data.get('body'),followUpId,outcome,messageId:form.dataset.messageId});
+      form.reset();
+      form.dataset.saving='false';
+      delete form.dataset.messageId;
+      delete form.dataset.followUpId;
       const isBusinessInbox=location.hash.slice(1)==='business/messages';
       await loadCommunicationCenter(supabase,{business:isBusinessInbox?getBusiness():null,user:currentUser,escapeHTML,initialsFor});
-      portalToast('Message sent.');
+      portalToast(followUpId ? 'Reply sent and follow-up outcome saved.' : 'Message sent.');
+      if (followUpId) {
+        try { await loadWorkspaceData(supabase,currentUser); refreshBusinessNotifications(); }
+        catch { portalToast('Reply and outcome saved. Refresh to update the reminder list.'); }
+      }
     } else if (form.id === 'member-access-form') {
       const businessId=form.dataset.businessId,customerId=form.dataset.customerId,productId=String(data.get('product_id')||''),selectedResource=String(data.get('resource_id')||''),reason=String(data.get('reason')||'').trim(),effect=event.submitter?.value==='revoke'?'revoke':'grant';
       const [resourceProductId,resourceId]=selectedResource ? selectedResource.split('::') : [productId,null];
@@ -469,6 +485,7 @@ document.addEventListener('submit', async event => {
     if(inline){inline.textContent=error?.message||'Something went wrong. Please try again.';inline.classList.add('auth-error');}
     else showError(error);
   } finally {
+    if(form.id==='conversation-message-form')form.querySelectorAll('textarea,select').forEach(input=>{input.disabled=false;});
     if(form.id==='redeem-access-code-form')form.querySelector('[name="access_code"]')?.removeAttribute('disabled');
     form.dataset.saving='false';if (button) {button.disabled = false;if(originalButtonText!==undefined)button.textContent=originalButtonText;}
   }
@@ -495,14 +512,34 @@ document.addEventListener('click', async event => {
   const menu = document.querySelector('#portal-account-menu');
   if (menu && !event.target.closest('.portal-top-actions')) { menu.hidden = true; document.querySelector('[data-menu-toggle]')?.setAttribute('aria-expanded','false'); }
   const notifications=document.querySelector('#business-notification-panel');if(notifications&&!event.target.closest('.business-notifications')){notifications.hidden=true;document.querySelector('[data-notification-toggle]')?.setAttribute('aria-expanded','false');}
-  const target = event.target.closest('[data-menu-toggle], [data-notification-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-crm], [data-customer-open], [data-audience-create], [data-audience-delete], [data-audience-filter], [data-follow-up-done], [data-follow-up-message], [data-member-entitlement-revoke], [data-member-entitlement-restore], [data-member-access-reset], [data-member-unblock], [data-resource-progress], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete], [data-password-toggle], [data-inbox-open], [data-inbox-refresh], [data-message-customer], [data-template-insert], [data-template-save], [data-template-manage], [data-template-edit], [data-template-delete], [data-template-new], [data-template-close]');
+  const target = event.target.closest('[data-menu-toggle], [data-notification-toggle], [data-theme], [data-profile-tab], [data-edit-profile], [data-close-modal], [data-notifications], [data-signout], [data-money-action], [data-business-insights], [data-business-notice], [data-product-archive], [data-product-export], [data-product-settings], [data-product-stock], [data-pricing-add], [data-pricing-remove], [data-pricing-edit], [data-pricing-done], [data-pricing-delete], [data-price-preset], [data-dialog-add-question], [data-dialog-remove-question], [data-stock-unlimited], [data-faq-add], [data-faq-remove], [data-checkout-question-add], [data-product-copy], [data-stock-url], [data-analytics-customize], [data-analytics-date], [data-analytics-shift], [data-customer-export], [data-customer-crm], [data-customer-open], [data-audience-create], [data-audience-delete], [data-audience-filter], [data-follow-up-done], [data-follow-up-message], [data-follow-up-reopen], [data-follow-up-conversation], [data-member-entitlement-revoke], [data-member-entitlement-restore], [data-member-access-reset], [data-member-unblock], [data-resource-progress], [data-copy-link], [data-customer-download], [data-access-code-disable], [data-access-revoke], [data-deliverable-delete], [data-password-toggle], [data-inbox-open], [data-inbox-refresh], [data-message-customer], [data-template-insert], [data-template-save], [data-template-manage], [data-template-edit], [data-template-delete], [data-template-new], [data-template-close]');
   if (!target) return;
   event.preventDefault();
   if(target.matches('[data-notification-toggle]')){const panel=document.querySelector('#business-notification-panel'),open=panel?.hidden;if(panel)panel.hidden=!open;target.setAttribute('aria-expanded',String(Boolean(open)));return;}
   if(target.matches('[data-audience-create]')){audienceSegmentDialog(getBusiness());return;}
   if(target.matches('[data-audience-filter]')){try{activeAudienceFilter={id:target.dataset.audienceFilter,name:target.querySelector('b')?.textContent||'audience',filters:JSON.parse(target.dataset.audienceFilters||'{}')};document.querySelectorAll('[data-audience-filter]').forEach(item=>item.classList.toggle('is-active',item===target));document.querySelector('#business-customer-search')?.dispatchEvent(new Event('input',{bubbles:true}));}catch{portalToast('Could not open this audience filter.');}return;}
   if(target.matches('[data-audience-delete]')){const segment=workspace.audienceSegments.find(item=>item.id===target.dataset.audienceDelete);if(!segment)return;if(!window.confirm(`Delete the saved audience “${segment.name}”?`))return;try{const {error}=await supabase.from('creator_audience_segments').delete().eq('id',segment.id).eq('business_id',getBusiness()?.id);if(error)throw error;activeAudienceFilter={id:'all',filters:{}};await loadWorkspaceData(supabase,currentUser);renderAuthRoute();portalToast('Saved audience deleted.');}catch(error){portalToast(error?.message||'Could not delete this audience.');}return;}
-  if(target.matches('[data-follow-up-message]')){try{const customerName=target.dataset.followUpCustomer||'there',firstName=customerName.split(/\s+/)[0],taskTitle=target.dataset.followUpTitle||'your program';const conversationId=await createCustomerConversation(supabase,{businessId:getBusiness()?.id,customerId:target.dataset.followUpMessage,user:currentUser});selectInboxConversation(conversationId,`Hi ${firstName}, just checking in about ${taskTitle}. How are things going? Let me know if you need any help.`);document.querySelector('.customer-member-backdrop')?.remove();if(location.hash.slice(1)==='business/messages')await loadCommunicationCenter(supabase,{business:getBusiness(),user:currentUser,escapeHTML,initialsFor});else location.hash='business/messages';portalToast('Draft ready in your inbox. Review it before sending.');}catch(error){portalToast(error?.message||'Could not prepare a message draft.');}return;}
+  if(target.matches('[data-follow-up-message]')){try{const customerName=target.dataset.followUpCustomer||'there',firstName=customerName.split(/\s+/)[0],taskTitle=target.dataset.followUpTitle||'your program';const conversationId=await createCustomerConversation(supabase,{businessId:getBusiness()?.id,customerId:target.dataset.followUpMessage,user:currentUser});selectInboxConversation(conversationId,`Hi ${firstName}, just checking in about ${taskTitle}. How are things going? Let me know if you need any help.`,{id:target.dataset.followUpId,title:taskTitle});document.querySelector('.customer-member-backdrop')?.remove();if(location.hash.slice(1)==='business/messages')await loadCommunicationCenter(supabase,{business:getBusiness(),user:currentUser,escapeHTML,initialsFor});else location.hash='business/messages';portalToast('Draft ready in your inbox. Review it before sending.');}catch(error){portalToast(error?.message||'Could not prepare a message draft.');}return;}
+  if(target.matches('[data-follow-up-conversation]')) {
+    selectInboxConversation(target.dataset.followUpConversation);
+    document.querySelector('.customer-member-backdrop')?.remove();
+    location.hash='business/messages';
+    return;
+  }
+  if(target.matches('[data-follow-up-reopen]')) {
+    const task=workspace.customerFollowUps.find(row=>row.id===target.dataset.followUpReopen);
+    if(!task)return;
+    target.disabled=true;
+    try {
+      const {data:updated,error}=await supabase.from('customer_follow_ups').update({status:'open',completed_at:null,updated_at:new Date().toISOString()}).eq('id',task.id).eq('business_id',getBusiness()?.id).select('id').single();
+      if(error)throw error;
+      await loadWorkspaceData(supabase,currentUser);
+      document.querySelector('.customer-member-backdrop')?.remove();
+      customerMemberDialog(getBusiness(),task.customer_id,ordersCustomerName(task.customer_id));
+      portalToast('Reminder reopened.');
+    } catch(error){target.disabled=false;portalToast(error.message||'Could not reopen reminder.');}
+    return;
+  }
   if(target.matches('[data-follow-up-done]')){const task=workspace.customerFollowUps.find(row=>row.id===target.dataset.followUpDone);if(!task||task.status!=='open')return;try{const {error}=await supabase.from('customer_follow_ups').update({status:'done',completed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',task.id).eq('business_id',getBusiness()?.id);if(error)throw error;await loadWorkspaceData(supabase,currentUser);if(document.querySelector('.customer-member-backdrop')){document.querySelector('.customer-member-backdrop')?.remove();customerMemberDialog(getBusiness(),task.customer_id,ordersCustomerName(task.customer_id));}else renderAuthRoute();portalToast('Follow-up marked complete.');}catch(error){portalToast(error?.message||'Could not update this reminder.');}return;}
   if(target.matches('[data-password-toggle]')){const input=target.closest('.auth-input-wrap')?.querySelector('input');if(input){const reveal=input.type==='password';input.type=reveal?'text':'password';target.setAttribute('aria-label',reveal?'Hide password':'Show password');target.classList.toggle('is-visible',reveal);}return;}
   if(target.matches('[data-template-insert]')){const id=document.querySelector('#message-template-select')?.value,template=document.querySelector('#inbox-shell')?._messageTemplates?.find(row=>row.id===id);if(!template){portalToast('Choose a saved reply first.');return;}const composer=document.querySelector('#inbox-message-input');if(composer?.value.trim()&&!window.confirm('Replace the current draft with this saved reply?'))return;if(composer){composer.value=template.body;composer.focus();}return;}

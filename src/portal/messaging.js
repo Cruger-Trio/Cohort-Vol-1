@@ -1,3 +1,7 @@
+import { followUpComposer } from './followups.js';
+
+let attachedFollowUp = null;
+let inboxLoadSequence = 0;
 let selectedConversationId = null;
 let pendingDraft = null;
 let realtimeChannel = null;
@@ -71,7 +75,8 @@ function renderMessages(messages, userId, escapeHTML, initialsFor, counterpart) 
 
 export async function loadCommunicationCenter(supabase, { business = null, user, escapeHTML = safe, initialsFor = value => String(value || '?').slice(0, 1).toUpperCase() } = {}) {
   const shell = document.querySelector('#inbox-shell');
-  if (!shell || !supabase || !user) return;
+  if (!shell || !supabase || !user || shell.querySelector('#conversation-message-form')?.dataset.saving === 'true') return;
+  const request = ++inboxLoadSequence;
   const creatorMode = Boolean(business && business.owner_id === user.id);
   const contextKey = creatorMode ? `creator:${business.id}` : `customer:${user.id}`;
   try {
@@ -107,8 +112,26 @@ export async function loadCommunicationCenter(supabase, { business = null, user,
     const counterpart = selected ? participantName(selected, creatorMode) : '';
     const rowsMarkup = rows.length ? rows.map(row => messageListItem(row, creatorMode, selectedConversationId, user.id, escapeHTML, initialsFor)).join('') : `<div class="inbox-list-empty"><span class="inbox-empty-icon">${creatorMode ? '↗' : '✳'}</span><b>${creatorMode ? 'Your inbox is ready' : 'No messages yet'}</b><p>${creatorMode ? 'Open a customer profile and choose Message customer to start a private thread.' : 'When a creator starts a conversation with you, it will appear here.'}</p>${creatorMode ? '<a href="#business/customers">Open customers</a>' : '<a href="#explore">Explore the marketplace</a>'}</div>`;
     const conversationMarkup = selected ? `<header class="inbox-conversation-head"><span class="inbox-avatar">${selected[creatorMode ? 'customer' : 'creator']?.avatar_url ? `<img src="${escapeHTML(selected[creatorMode ? 'customer' : 'creator'].avatar_url)}" alt="">` : escapeHTML(initialsFor(counterpart))}</span><span><b>${escapeHTML(counterpart)}</b><small>${escapeHTML(creatorMode ? (selected.customer?.username ? `@${selected.customer.username}` : 'Customer') : selected.business?.name || 'Creator')}</small></span><span class="inbox-thread-status"><i></i> Private conversation</span></header><div class="inbox-message-list" id="inbox-message-list">${renderMessages(messages, user.id, escapeHTML, initialsFor, counterpart)}</div>${creatorMode ? `<div class="message-template-toolbar"><label><span>Saved reply</span><select id="message-template-select" aria-label="Choose a saved reply"><option value="">${templates.length ? 'Select a saved reply' : 'No saved replies yet'}</option>${templates.map(template => `<option value="${escapeHTML(template.id)}">${escapeHTML(template.name)}</option>`).join('')}</select></label><button type="button" class="portal-action" data-template-insert ${templates.length ? '' : 'disabled'}>Insert</button><button type="button" class="portal-action" data-template-save>Save draft</button><button type="button" class="portal-action" data-template-manage>Manage</button></div>` : ''}<form class="inbox-compose" id="conversation-message-form" data-conversation-id="${escapeHTML(selected.id)}"><label class="inbox-sr-only" for="inbox-message-input">Write a message</label><textarea id="inbox-message-input" name="body" rows="1" maxlength="4000" placeholder="Write a message…" required></textarea><div class="inbox-compose-footer"><span>Direct message · Be kind and clear</span><button class="button button-primary" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg><span>Send</span></button></div></form>` : `<div class="inbox-select-empty"><span class="inbox-empty-icon">✉</span><b>Select a conversation</b><p>Choose a thread from the list to read and reply.</p></div>`;
+    if (request !== inboxLoadSequence || !shell.isConnected) return;
+    const previousForm = shell.querySelector('#conversation-message-form');
+    if (previousForm?.dataset.saving === 'true') return;
+    const savedComposer = previousForm && selected && previousForm.dataset.conversationId === selected.id ? {
+      body: previousForm.querySelector('[name="body"]')?.value || '',
+      outcome: previousForm.querySelector('[name="follow_up_outcome"]')?.value,
+      messageId: previousForm.dataset.messageId,
+    } : null;
     shell._messageTemplates = templates;
     shell.innerHTML = `<aside class="inbox-list-panel"><div class="inbox-list-toolbar"><label class="inbox-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" id="inbox-search" placeholder="Search conversations" aria-label="Search conversations"></label><button class="inbox-refresh" type="button" data-inbox-refresh aria-label="Refresh inbox" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></svg></button></div><div class="inbox-thread-list">${rowsMarkup}</div></aside><section class="inbox-conversation-panel">${conversationMarkup}</section>`;
+    const composeForm = shell.querySelector('#conversation-message-form');
+    if (composeForm && creatorMode && attachedFollowUp?.conversationId === selected?.id) {
+      composeForm.dataset.followUpId = attachedFollowUp.id;
+      composeForm.insertAdjacentHTML('afterbegin', followUpComposer(attachedFollowUp, escapeHTML));
+      if (savedComposer?.outcome) composeForm.elements.follow_up_outcome.value = savedComposer.outcome;
+    }
+    if (composeForm && savedComposer) {
+      composeForm.elements.body.value = savedComposer.body;
+      if (savedComposer.messageId) composeForm.dataset.messageId = savedComposer.messageId;
+    }
     if (pendingDraft?.conversationId === selected?.id) {
       const composer = shell.querySelector('#inbox-message-input');
       if (composer) {
@@ -143,6 +166,9 @@ export async function loadCommunicationCenter(supabase, { business = null, user,
 }
 
 export async function createCustomerConversation(supabase, { businessId, customerId, user }) {
+  attachedFollowUp = null;
+  pendingDraft = null;
+  inboxLoadSequence++;
   const existing = await supabase.from('creator_conversations').select('id').eq('business_id', businessId).eq('customer_id', customerId).maybeSingle();
   if (existing.error) throw existing.error;
   if (existing.data) {
@@ -161,21 +187,29 @@ export async function createCustomerConversation(supabase, { businessId, custome
   return created.data.id;
 }
 
-export async function sendInboxMessage(supabase, { conversationId, user, body }) {
+export async function sendInboxMessage(supabase, { conversationId, user, body, followUpId = null, outcome = null, messageId = null }) {
   const text = String(body || '').trim();
   if (!text) throw new Error('Write a message before sending.');
   if (text.length > 4000) throw new Error('Keep messages under 4,000 characters.');
-  const { error } = await supabase.from('creator_messages').insert({ conversation_id: conversationId, sender_id: user.id, body: text });
+  const result = followUpId
+    ? await supabase.rpc('send_creator_follow_up_reply', { p_conversation_id: conversationId, p_follow_up_id: followUpId, p_body: text, p_outcome: outcome, p_message_id: messageId })
+    : await supabase.from('creator_messages').insert({ conversation_id: conversationId, sender_id: user.id, body: text });
+  const { error } = result;
   if (error) throw error;
   selectedConversationId = conversationId;
+  attachedFollowUp = null;
+  pendingDraft = null;
 }
 
-export function selectInboxConversation(id, draft = null) {
+export function selectInboxConversation(id, draft = null, followUp = null) {
+  inboxLoadSequence++;
+  attachedFollowUp = followUp?.id && id ? { ...followUp, conversationId: id } : id === selectedConversationId ? attachedFollowUp : null;
   selectedConversationId = id || null;
   pendingDraft = draft && id ? { conversationId: id, body: String(draft) } : null;
 }
 
 export async function stopCommunicationCenterRealtime(supabase) {
+  inboxLoadSequence++;
   if (realtimeChannel && supabase) await supabase.removeChannel(realtimeChannel);
   realtimeChannel = null;
   realtimeKey = '';
