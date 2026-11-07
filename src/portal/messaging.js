@@ -1,4 +1,5 @@
 import { followUpComposer } from './followups.js';
+import { skeletonInbox } from '../ui/skeletons.js';
 
 let attachedFollowUp = null;
 let inboxLoadSequence = 0;
@@ -43,7 +44,7 @@ export function communicationCenterPage({ business = null, user, escapeHTML = sa
     : 'Your conversations with Cohort creators, all together.';
   return `<section class="communication-center" data-creator-mode="${creatorMode}">
     <header class="inbox-heading"><div><span class="portal-kicker">${creatorMode ? 'AUDIENCE' : 'YOUR COHORT'}</span><h1>${title}</h1><p>${subhead}</p></div>${creatorMode ? '<a class="inbox-secondary-action" href="#business/customers"><span aria-hidden="true">＋</span> Find a customer</a>' : '<a class="inbox-secondary-action" href="#explore">Explore creators <span aria-hidden="true">↗</span></a>'}</header>
-    <div class="inbox-shell" id="inbox-shell" aria-live="polite"><div class="inbox-loading"><span class="cohort-spinner" aria-hidden="true"></span><span>Loading your inbox…</span></div></div>
+    <div class="inbox-shell" id="inbox-shell" aria-live="polite">${skeletonInbox()}</div>
   </section>`;
 }
 
@@ -77,6 +78,8 @@ export async function loadCommunicationCenter(supabase, { business = null, user,
   const shell = document.querySelector('#inbox-shell');
   if (!shell || !supabase || !user || shell.querySelector('#conversation-message-form')?.dataset.saving === 'true') return;
   const request = ++inboxLoadSequence;
+  shell.setAttribute('aria-busy', 'true');
+  shell.classList.add('is-refreshing');
   const creatorMode = Boolean(business && business.owner_id === user.id);
   const contextKey = creatorMode ? `creator:${business.id}` : `customer:${user.id}`;
   try {
@@ -161,7 +164,16 @@ export async function loadCommunicationCenter(supabase, { business = null, user,
       }).subscribe();
     }
   } catch (error) {
-    shell.innerHTML = `<div class="inbox-error"><span class="inbox-empty-icon">!</span><b>We couldn’t load messages</b><p>${escapeHTML(error?.message || 'Please refresh and try again.')}</p><button class="inbox-secondary-action" type="button" data-inbox-refresh>Try again</button></div>`;
+    if (request !== inboxLoadSequence || !shell.isConnected) return;
+    const message = escapeHTML(error?.message || 'Please refresh and try again.');
+    if (shell.querySelector('.inbox-list-panel')) {
+      shell.querySelector('.inbox-inline-error')?.remove();
+      shell.insertAdjacentHTML('afterbegin', `<div class="inbox-inline-error" role="alert"><span>Couldn’t refresh messages. ${message}</span><button type="button" data-inbox-refresh>Retry</button></div>`);
+    } else {
+      shell.innerHTML = `<div class="inbox-error"><span class="inbox-empty-icon">!</span><b>We couldn’t load messages</b><p>${message}</p><button class="inbox-secondary-action" type="button" data-inbox-refresh>Try again</button></div>`;
+    }
+  } finally {
+    if (request === inboxLoadSequence) { shell.removeAttribute('aria-busy'); shell.classList.remove('is-refreshing'); }
   }
 }
 

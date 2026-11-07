@@ -21008,30 +21008,30 @@ function pricingOptionCard(o = {}, i = 0) {
 function pricingQuestionFields(q = {}, i, j) {
   return `<div class="pricing-question-source" data-question-source><input name="checkout_title_${i}_${j}" value="${escapeHTML(q.title || "")}" placeholder="Question title"><input name="checkout_placeholder_${i}_${j}" value="${escapeHTML(q.placeholder || "")}" placeholder="Answer placeholder"><input name="checkout_optional_${i}_${j}" type="checkbox" ${q.optional ? "checked" : ""}></div>`;
 }
-function pricingOptionDialog(card) {
-  const field = (name) => card.querySelector(`[name^="${name}_"]`), cadence = field("pricing_cadence")?.value || "once", amount = field("pricing_amount")?.value || "", stock = field("pricing_stock")?.value || "", checked = (name) => !!field(name)?.checked, questionRows = [...card.querySelectorAll("[data-question-source]")], questions = questionRows.map((row) => ({ title: row.querySelector('[name^="checkout_title_"]')?.value || "", placeholder: row.querySelector('[name^="checkout_placeholder_"]')?.value || "", optional: !!row.querySelector('[name^="checkout_optional_"]')?.checked })), button = field("pricing_button")?.value || "default", internal = field("pricing_internal")?.value || "";
+function pricingOptionDialog(card2) {
+  const field = (name) => card2.querySelector(`[name^="${name}_"]`), cadence = field("pricing_cadence")?.value || "once", amount = field("pricing_amount")?.value || "", stock = field("pricing_stock")?.value || "", checked = (name) => !!field(name)?.checked, questionRows = [...card2.querySelectorAll("[data-question-source]")], questions = questionRows.map((row) => ({ title: row.querySelector('[name^="checkout_title_"]')?.value || "", placeholder: row.querySelector('[name^="checkout_placeholder_"]')?.value || "", optional: !!row.querySelector('[name^="checkout_optional_"]')?.checked })), button = field("pricing_button")?.value || "default", internal = field("pricing_internal")?.value || "";
   return `<div class="portal-modal-backdrop pricing-modal-backdrop"><section class="portal-modal pricing-modal" role="dialog" aria-modal="true"><button type="button" class="portal-modal-close" data-close-modal aria-label="Close">&times;</button><span class="portal-kicker">PRICING</span><h2>Pricing option</h2><div class="pricing-modal-scroll"><label class="form-field"><span>Billing</span><select data-dialog-cadence><option value="once" ${cadence === "once" ? "selected" : ""}>One-time</option><option value="monthly" ${cadence === "monthly" ? "selected" : ""}>Monthly</option><option value="quarterly" ${cadence === "quarterly" ? "selected" : ""}>Quarterly</option><option value="yearly" ${cadence === "yearly" ? "selected" : ""}>Yearly</option></select></label><div class="pricing-amount-row"><label class="form-field"><span>Price</span><div class="pricing-currency-input"><span>&#8377;</span><input data-dialog-amount type="number" min="0" step="1" value="${Number(amount)}" placeholder="0"></div></label><label class="form-field"><span>Currency</span><select disabled><option>INR</option></select></label></div><div class="pricing-presets"><button type="button" data-price-preset="499">&#8377;499</button><button type="button" data-price-preset="999">&#8377;999</button><button type="button" data-price-preset="2499">&#8377;2,499</button></div><div class="pricing-dialog-divider"></div><label class="pricing-setting-toggle"><span><b>Ask questions before checkout</b><small>Collect information from buyers before they join.</small></span><input type="checkbox" data-dialog-questions ${checked("pricing_questions") ? "checked" : ""}></label><div class="pricing-dialog-questions" ${checked("pricing_questions") ? "" : "hidden"}>${questions.map((q, j) => pricingDialogQuestion(q, j)).join("")}</div><button type="button" class="pricing-add-question" data-dialog-add-question ${checked("pricing_questions") ? "" : "hidden"}>+ Add another question</button><details class="pricing-plan-settings" open><summary>Plan settings</summary><label class="form-field"><span>Stock</span><div class="pricing-stock-row"><input data-dialog-stock type="number" min="0" value="${escapeHTML(stock)}" placeholder="Unlimited"><button type="button" data-stock-unlimited title="Set unlimited stock">&#8734;</button></div></label><label class="pricing-option-toggle"><input type="checkbox" data-dialog-setting="waitlist" ${checked("pricing_waitlist") ? "checked" : ""}><span>Add a waitlist</span></label><label class="pricing-option-toggle"><input type="checkbox" data-dialog-setting="hidden" ${checked("pricing_hidden") ? "checked" : ""}><span>Hide from store page</span></label><label class="pricing-option-toggle"><input type="checkbox" data-dialog-setting="expire" ${checked("pricing_expire") ? "checked" : ""}><span>Auto-expire access</span></label><label class="form-field pricing-expire-days" ${checked("pricing_expire") ? "" : "hidden"}><span>Expire after (days)</span><input data-dialog-expire-days type="number" min="1" value="${field("pricing_expire_days")?.value || 30}"></label><label class="pricing-option-toggle"><input type="checkbox" data-dialog-setting="multiple" ${checked("pricing_multiple") ? "checked" : ""}><span>Allow more than one per order</span></label><label class="pricing-option-toggle"><input type="checkbox" data-dialog-setting="internal-enabled" ${checked("pricing_internal_enabled") ? "checked" : ""}><span>Add internal name</span></label><label class="form-field pricing-internal-field" ${checked("pricing_internal_enabled") ? "" : "hidden"}><span>Internal name</span><input data-dialog-internal value="${escapeHTML(internal)}" placeholder="Only visible to you"></label><div class="pricing-select-row"><span>Payment security</span><small>Managed by your payment provider when checkout is connected.</small></div><label class="pricing-select-row"><span>Checkout button text</span><select data-dialog-button><option value="default" ${button === "default" ? "selected" : ""}>Product default</option><option>Join for free</option><option>Buy now</option><option>Subscribe</option><option>Get access</option></select></label></details></div><footer class="pricing-modal-footer"><button type="button" class="pricing-delete" data-pricing-delete>Delete</button><button type="button" class="button button-primary" data-pricing-done>Done</button></footer></section></div>`;
 }
 function pricingDialogQuestion(q = {}, i = 0) {
   return `<div class="pricing-dialog-question" data-dialog-question><span class="question-number">${i + 1}</span><div class="question-fields"><label><span class="sr-only">Question title</span><input data-question-title value="${escapeHTML(q.title || "")}" placeholder="Title (e.g. What is your Instagram?)"></label><label><span class="sr-only">Answer placeholder</span><input data-question-placeholder value="${escapeHTML(q.placeholder || "")}" placeholder="Placeholder (e.g. @sarah)"></label><label class="pricing-question-optional"><input data-question-optional type="checkbox" ${q.optional ? "checked" : ""}> Optional</label></div><button type="button" class="pricing-question-delete" data-dialog-remove-question aria-label="Remove question">&#128465;</button></div>`;
 }
-function savePricingOptionDialog(card, modal) {
+function savePricingOptionDialog(card2, modal) {
   const val = (selector) => modal.querySelector(selector), set = (selector, value) => {
-    const input = card.querySelector(selector);
+    const input = card2.querySelector(selector);
     if (input) {
       if (input.type === "checkbox") input.checked = !!value;
       else input.value = value ?? "";
     }
-  }, i = Number(card.querySelector('[name^="pricing_cadence_"]')?.name.match(/_(\d+)$/)?.[1] || 0);
+  }, i = Number(card2.querySelector('[name^="pricing_cadence_"]')?.name.match(/_(\d+)$/)?.[1] || 0);
   set(`[name="pricing_cadence_${i}"]`, val("[data-dialog-cadence]")?.value || "once");
   set(`[name="pricing_amount_${i}"]`, Number(val("[data-dialog-amount]")?.value || 0));
   set(`[name="pricing_questions_${i}"]`, !!val("[data-dialog-questions]")?.checked);
-  const qbox = card.querySelector(".pricing-question-fields");
+  const qbox = card2.querySelector(".pricing-question-fields");
   qbox.innerHTML = [...modal.querySelectorAll("[data-dialog-question]")].map((row, j) => pricingQuestionFields({ title: row.querySelector("[data-question-title]")?.value || "", placeholder: row.querySelector("[data-question-placeholder]")?.value || "", optional: !!row.querySelector("[data-question-optional]")?.checked }, i, j)).join("");
   const settings = { "stock": val("[data-dialog-stock]")?.value || "", "waitlist": !!val('[data-dialog-setting="waitlist"]')?.checked, "hidden": !!val('[data-dialog-setting="hidden"]')?.checked, "expire": !!val('[data-dialog-setting="expire"]')?.checked, "expire-days": val("[data-dialog-expire-days]")?.value || 30, "multiple": !!val('[data-dialog-setting="multiple"]')?.checked, "internal-enabled": !!val('[data-dialog-setting="internal-enabled"]')?.checked, "internal": val("[data-dialog-internal]")?.value || "", "button": val("[data-dialog-button]")?.value || "default" };
   for (const [key, value] of Object.entries(settings)) set(`[name="pricing_${key.replaceAll("-", "_")}_${i}"]`, value);
-  card.dataset.unlimited = settings.stock === "";
-  const cadence = settings.cadence = val("[data-dialog-cadence]")?.value || "once", amount = Number(val("[data-dialog-amount]")?.value || 0), summary = card.querySelector(".pricing-summary");
+  card2.dataset.unlimited = settings.stock === "";
+  const cadence = settings.cadence = val("[data-dialog-cadence]")?.value || "once", amount = Number(val("[data-dialog-amount]")?.value || 0), summary = card2.querySelector(".pricing-summary");
   if (summary) summary.innerHTML = `${escapeHTML(cadence === "once" ? "One-time" : cadence)} &middot; &#8377;${amount.toLocaleString("en-IN")}`;
 }
 
@@ -21442,6 +21442,12 @@ function businessAnalytics() {
   return `${businessHeading3("PERFORMANCE", "Analytics", "Business results calculated from orders and memberships recorded in Cohort.", '<button class="portal-action" type="button" data-analytics-customize>Customize</button>')}<div class="analytics-controls"><label><span class="sr-only">Date range</span><select id="analytics-period"><option value="Today">Today</option><option value="7 days">Last 7 days</option><option value="30 days">Last 30 days</option><option value="90 days">Last 90 days</option></select></label><span class="analytics-date-label">${(/* @__PURE__ */ new Date()).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}</span><span id="analytics-period-note">All dates shown are based on recorded data</span></div>${demoOrders.length ? `<aside class="analytics-demo-note"><b>Demo data included</b><span>${demoOrders.length} synthetic orders are included in these totals. They are not real payments or withdrawable funds.</span></aside>` : ""}<div class="analytics-dashboard-grid"><section class="analytics-card analytics-profit" data-analytics-widget="Profit"><header><b>Paid revenue${demoOrders.length ? " \xB7 includes demo" : ""}</b></header><strong>${inr2(amount)}</strong><div class="analytics-zero-chart"><div class="analytics-empty-chart"><span>${paid.length ? `${paid.length} paid orders` : "No paid orders recorded"}</span></div></div></section><section class="analytics-card analytics-cashflow" data-analytics-widget="Cashflow"><header><b>Cashflow</b></header><a href="#business/payments"><span class="cashflow-icon">\xE2\u201A\xB9</span><span><b>Payments</b><small>Recorded paid orders</small></span><strong>${paid.length}</strong></a><a href="#business/customers"><span class="cashflow-icon">\xE2\u2014\u2030</span><span><b>Customers</b><small>Unique buyers</small></span><strong>${uniqueBuyers}</strong></a><a href="#business/payments" class="cashflow-report">View payment records \xE2\u2020\u2019</a></section><div class="analytics-kpis">${metric("Amount", inr2(amount))}${metric("Visitors", "\xE2\u20AC\u201D", noSiteData)}${metric("Successful payments", String(paid.length))}${metric("Profit margin", "\xE2\u20AC\u201D", "Payout and platform cost data not available")}</div><section class="analytics-card analytics-gtv" data-analytics-widget="Gross transaction value"><header><div><b>Gross transaction value</b><strong>${inr2(amount)}</strong><small>Paid orders</small></div></header><div class="analytics-empty-chart"><span>${paid.length ? `${paid.length} paid order${paid.length === 1 ? "" : "s"}` : "No paid orders recorded"}</span></div></section><section class="analytics-card analytics-live" data-analytics-widget="Live events"><header><b>Live events</b></header><div class="analytics-no-events"><b>No live events</b><p>${noSiteData}.</p><a class="text-link" href="#business/websites">+ Add website</a></div></section><section class="analytics-card analytics-sources" data-analytics-widget="Top sources"><header><b>Top sources</b></header><div class="analytics-no-events"><p>${noSiteData}.</p><a class="portal-action" href="#business/websites">+ Add website</a></div></section><section class="analytics-card analytics-traffic" data-analytics-widget="Traffic over time"><header><b>Traffic over time</b></header><div class="analytics-empty-chart"><span>${noSiteData}</span></div></section>${metric("Avg revenue per customer", inr2(uniqueBuyers ? amount / uniqueBuyers : 0))}${metric("Total refunded", inr2(revenue(refunded)))}<section class="analytics-card analytics-small" data-analytics-widget="Devices"><header><b>Devices</b></header><div class="analytics-no-events">${noSiteData}</div></section><section class="analytics-card analytics-small" data-analytics-widget="Countries"><header><b>Countries</b></header><div class="analytics-no-events">${noSiteData}</div></section><section class="analytics-card analytics-pages" data-analytics-widget="Top pages"><header><b>Top pages</b></header><div class="analytics-no-events">${noSiteData}</div></section><section class="analytics-card analytics-abandoned" data-analytics-widget="Abandoned checkouts"><header><b>Abandoned checkouts</b></header><div class="analytics-no-events">Checkout events are not recorded yet</div></section><section class="analytics-card analytics-time" data-analytics-widget="Traffic by time"><header><b>Traffic by time</b></header><div class="analytics-no-events">${noSiteData}</div></section><div class="analytics-bottom-kpis">${metric("New customers", String(uniqueBuyers))}${metric("Refund rate", refundRate)}${metric("Dispute rate", "\xE2\u20AC\u201D", "Disputes are not tracked")}${metric("Paid active members", String(activeMembers))}${metric("Churn rate", "\xE2\u20AC\u201D", "Membership cancellation events are not tracked")}${metric("Churned revenue", "\xE2\u20AC\u201D", "Membership cancellation events are not tracked")}</div></div>`;
 }
 
+// src/ui/space-card.js
+var esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+function spaceCard({ href, title, type, detail, action = "Open space", index = 0 }) {
+  return `<a class="cohort-space-card" href="${esc(href)}"><span class="cohort-space-art tone-${index % 4}" aria-hidden="true"><span>\u2733</span><small>COHORT / MEMBER SPACE</small></span><span class="cohort-space-content"><span class="cohort-space-type">${esc(type || "Community")}</span><strong>${esc(title || "Member space")}</strong><span class="cohort-space-detail">${esc(detail)}</span><span class="cohort-space-action">${esc(action)} <span aria-hidden="true">\u2197</span></span></span></a>`;
+}
+
 // src/portal/personal.js
 var fallbackEscape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 function profileContent({ user, name, activeTab, escapeHTML: escapeHTML7 = fallbackEscape, initialsFor: initialsFor3 }) {
@@ -21451,7 +21457,7 @@ function profileContent({ user, name, activeTab, escapeHTML: escapeHTML7 = fallb
   const activeMembers = business ? new Set(workspace.entitlements.filter((item) => item.business_id === business.id && item.status === "active").map((item) => item.buyer_id).filter(Boolean)).size : 0;
   const cover = profile.cover_media_url ? String(profile.cover_media_type || "").startsWith("video/") ? `<video class="profile-cover-media" src="${escapeHTML7(profile.cover_media_url)}" autoplay muted loop playsinline aria-label="Creator profile cover video"></video>` : `<img class="profile-cover-media" src="${escapeHTML7(profile.cover_media_url)}" alt="Creator profile cover">` : "";
   const joined = user?.created_at ? new Date(user.created_at).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "\u2014";
-  const joinedCards = workspace.memberships.length ? `<div class="business-card-list">${workspace.memberships.map((item) => `<article class="business-card"><span class="business-avatar">${escapeHTML7(initialsFor3(item.businesses?.name || item.products?.name))}</span><div><b>${escapeHTML7(item.products?.name || "Membership")}</b><p>${escapeHTML7(item.businesses?.name || "Cohort creator")} \xB7 ${escapeHTML7(item.status)}</p></div><a class="text-link" href="/p/${encodeURIComponent(item.businesses?.handle || "")}/${encodeURIComponent(item.products?.slug || "")}">View offer \u2192</a></article>`).join("")}</div>` : `<div class="portal-empty-state"><span>\u2733</span><b>No memberships yet</b><p>Memberships you join will appear here.</p><a class="button button-primary" href="#communities">Explore communities \u2192</a></div>`;
+  const joinedCards = workspace.memberships.length ? `<div class="business-card-list cohort-grid">${workspace.memberships.map((item, index) => spaceCard({ href: `/p/${encodeURIComponent(item.businesses?.handle || "")}/${encodeURIComponent(item.products?.slug || "")}`, title: item.products?.name || "Membership", type: item.products?.type || "Membership", detail: `${item.businesses?.name || "Cohort creator"} \xB7 ${item.status}`, action: "View offer", index })).join("")}</div>` : `<div class="portal-empty-state"><span>\u2733</span><b>No memberships yet</b><p>Memberships you join will appear here.</p><a class="button button-primary" href="#communities">Explore communities \u2192</a></div>`;
   const createdCard = business ? `<article class="business-card"><span class="business-avatar">${escapeHTML7(initialsFor3(business.name))}</span><div><b>${escapeHTML7(business.name)}</b><p>@${escapeHTML7(business.handle)} \xB7 ${escapeHTML7(business.category)} \xB7 ${escapeHTML7(business.status)}</p></div><a class="text-link" href="#business/home">Open workspace \u2192</a></article>` : `<div class="portal-empty-state"><span>\uFF0B</span><b>No businesses created</b><p>Start a creator workspace to sell products, memberships and community access.</p><a class="button button-primary" href="#portal/create-business">Create a business \u2192</a></div>`;
   return `<div class="profile-page-heading"><span class="portal-kicker">PERSONAL PROFILE</span></div><section class="profile-card"><div class="profile-cover" style="background:${escapeHTML7(profile.cover_color || "#252624")}">${cover}<button type="button" class="cover-edit-button" data-edit-profile>Edit cover</button></div><div class="profile-body"><div class="profile-identity"><div class="profile-avatar-wrap"><span class="profile-avatar" ${profile.avatar_url ? `style="background-image:url('${escapeHTML7(profile.avatar_url)}');color:transparent;background-size:cover;background-position:center"` : ""}>${profile.avatar_url ? "" : escapeHTML7(initialsFor3(name))}</span><i class="online-dot"></i></div><h1>${escapeHTML7(name)}</h1><div class="profile-handle">@${escapeHTML7(profile.username || user?.email?.split("@")[0] || "creator")}</div><p class="profile-details">${profile.location ? `${escapeHTML7(profile.location)} \xB7 ` : ""}Joined ${escapeHTML7(joined)}</p>${profile.bio ? `<p class="profile-bio">${escapeHTML7(profile.bio)}</p>` : ""}<div class="profile-followers" aria-label="Creator customer and membership counts"><span><b>${paidBuyers}</b> Customers</span><span><b>${activeMembers}</b> With product access</span></div><div class="profile-actions"><button class="portal-action" data-edit-profile>Edit profile</button><a class="portal-action" href="#portal/orders">Manage orders</a></div></div><div class="profile-tabs"><button class="${activeTab === "created" ? "selected" : ""}" data-profile-tab="created">Created</button><button class="${activeTab === "joined" ? "selected" : ""}" data-profile-tab="joined">Joined</button></div><div class="profile-tab-content">${activeTab === "created" ? createdCard : joinedCards}</div></div></section>`;
 }
@@ -21508,7 +21514,7 @@ function openProfileEditor({ user, name, escapeHTML: escapeHTML7 = fallbackEscap
 }
 
 // src/portal/onboarding.js
-var esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+var esc2 = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 function creatorOnboarding({ profile, business }) {
   const products = business?.products || [];
   const profileReady = !!(profile?.full_name && profile?.username && profile?.bio && profile?.avatar_url);
@@ -21525,12 +21531,24 @@ function creatorOnboarding({ profile, business }) {
   const productPath = published ? `/p/${published.businessHandle}/${published.slug}` : "";
   return `<div class="creator-onboarding"><header class="onboarding-intro"><span class="portal-kicker">CREATOR SETUP</span><h1>${complete ? "Your creator page is ready to meet the world." : "Let\u2019s get your creator business ready."}</h1><p>${complete ? "Your product is published and can be shared with anyone." : "A few guided steps will take you from profile to your first public offer."}</p><div class="onboarding-progress"><span style="width:${Math.round(steps.filter((step) => step.done).length / steps.length * 100)}%"></span></div><small>${steps.filter((step) => step.done).length} of ${steps.length} steps complete</small></header><section class="onboarding-steps">${steps.map((step, index) => {
     const locked = index === 1 && !profileReady || index === 2 && (!profileReady || !businessReady);
-    return `<article class="onboarding-step ${step.done ? "is-done" : ""}"><span class="onboarding-step-number">${step.done ? "\u2713" : index + 1}</span><div><h2>${esc(step.title)}</h2><p>${esc(step.description)}</p>${step.action ? `<button class="button button-primary" data-edit-profile>${esc(step.label)} \u2192</button>` : locked ? `<button class="button portal-action" type="button" disabled>${esc(step.label)}</button>` : `<a class="button ${step.done ? "portal-action" : "button-primary"}" href="${esc(step.href)}">${esc(step.label)}${step.done ? "" : " \u2192"}</a>`}</div></article>`;
-  }).join("")}</section>${complete ? `<section class="onboarding-share"><b>Your public product link</b><a href="${esc(productPath)}">${location.origin}${esc(productPath)}</a><button class="portal-action" type="button" data-copy-link="${esc(productPath)}">Copy link</button></section>` : ""}<footer><a href="#portal/profile">Go to personal portal</a>${business ? `<a href="#business/home">Open business workspace \u2192</a>` : ""}</footer></div>`;
+    return `<article class="onboarding-step ${step.done ? "is-done" : ""}"><span class="onboarding-step-number">${step.done ? "\u2713" : index + 1}</span><div><h2>${esc2(step.title)}</h2><p>${esc2(step.description)}</p>${step.action ? `<button class="button button-primary" data-edit-profile>${esc2(step.label)} \u2192</button>` : locked ? `<button class="button portal-action" type="button" disabled>${esc2(step.label)}</button>` : `<a class="button ${step.done ? "portal-action" : "button-primary"}" href="${esc2(step.href)}">${esc2(step.label)}${step.done ? "" : " \u2192"}</a>`}</div></article>`;
+  }).join("")}</section>${complete ? `<section class="onboarding-share"><b>Your public product link</b><a href="${esc2(productPath)}">${location.origin}${esc2(productPath)}</a><button class="portal-action" type="button" data-copy-link="${esc2(productPath)}">Copy link</button></section>` : ""}<footer><a href="#portal/profile">Go to personal portal</a>${business ? `<a href="#business/home">Open business workspace \u2192</a>` : ""}</footer></div>`;
+}
+
+// src/ui/skeletons.js
+var card = () => `<div class="skeleton-card" aria-hidden="true"><div class="skeleton-shape skeleton-cover"></div><div class="skeleton-card-body"><div class="skeleton-shape skeleton-avatar"></div><div class="skeleton-shape skeleton-line short"></div><div class="skeleton-shape skeleton-line title"></div><div class="skeleton-shape skeleton-line medium"></div><div class="skeleton-shape skeleton-line footer"></div></div></div>`;
+function skeletonFeed() {
+  return `<div class="cohort-loading skeleton-feed" role="status" aria-live="polite" aria-busy="true"><span class="sr-only">Loading conversation\u2026</span>${Array.from({ length: 2 }, () => `<div class="skeleton-post" aria-hidden="true"><div class="skeleton-post-head"><span class="skeleton-shape skeleton-avatar"></span><span class="skeleton-shape skeleton-line short"></span></div><span class="skeleton-shape skeleton-line title"></span><span class="skeleton-shape skeleton-line medium"></span><span class="skeleton-shape skeleton-line short"></span></div>`).join("")}</div>`;
+}
+function skeletonInbox() {
+  return `<div class="cohort-loading skeleton-inbox" role="status" aria-live="polite" aria-busy="true"><span class="sr-only">Loading your inbox\u2026</span><aside aria-hidden="true">${Array.from({ length: 5 }, () => `<div class="skeleton-thread"><span class="skeleton-shape skeleton-avatar"></span><span class="skeleton-shape skeleton-line medium"></span></div>`).join("")}</aside><div class="skeleton-inbox-content" aria-hidden="true"><span class="skeleton-shape skeleton-line short"></span><span class="skeleton-shape skeleton-message"></span><span class="skeleton-shape skeleton-message own"></span><span class="skeleton-shape skeleton-message"></span></div></div>`;
+}
+function skeletonWorkspace() {
+  return `<div class="workspace-loading" role="status" aria-live="polite" aria-busy="true"><span class="sr-only">Loading your workspace\u2026</span><div class="workspace-loading-nav" aria-hidden="true"><span class="skeleton-shape skeleton-line medium"></span>${Array.from({ length: 6 }, () => `<span class="skeleton-shape skeleton-line title"></span>`).join("")}</div><div class="workspace-loading-main" aria-hidden="true"><span class="skeleton-shape skeleton-line short"></span><span class="skeleton-shape skeleton-heading"></span><span class="skeleton-shape skeleton-line medium"></span><div class="cohort-grid skeleton-grid">${Array.from({ length: 3 }, card).join("")}</div></div></div>`;
 }
 
 // src/portal/community.js
-var esc2 = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+var esc3 = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 var active = (item) => item?.status === "active" && (!item.starts_at || new Date(item.starts_at) <= /* @__PURE__ */ new Date()) && (!item.ends_at || new Date(item.ends_at) > /* @__PURE__ */ new Date());
 var initials = (name) => String(name || "C").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 var displayName = (profile, fallback = "Cohort member") => profile?.full_name || (profile?.username ? `@${profile.username}` : fallback);
@@ -21539,13 +21557,13 @@ function businessCommunity(business, productId = "") {
   const spaces = productSpaces(business);
   const selected = spaces.find((product) => product.id === productId);
   if (productId && selected) {
-    return `<div class="portal-page-heading"><div><span class="portal-kicker">MEMBER SPACE</span><h1>${esc2(selected.name)}</h1><p>${esc2(selected.description || "Share updates and keep your members close.")}</p></div><a class="portal-action" href="#business/community">All spaces</a></div>
-      <section class="portal-panel community-composer"><div class="community-composer-head"><span class="community-avatar">${esc2(initials(business.name))}</span><span><b>Post an update</b><small>Your active members will see this in their Cohort community.</small></span></div><form data-community-post-form data-product-id="${esc2(selected.id)}"><label class="sr-only" for="community-post-body">Your update</label><textarea id="community-post-body" name="body" maxlength="4000" rows="4" placeholder="Share a lesson, announcement, prompt, or useful link\u2026" required></textarea><div class="community-form-footer"><span>Plain text \xB7 up to 4,000 characters</span><button class="button button-primary" type="submit">Publish update</button></div><p class="auth-message" data-community-status role="status"></p></form></section>
-      <section class="community-feed-section"><div class="community-feed-heading"><div><h2>Member conversation</h2><p>Posts and replies from this space.</p></div><button class="portal-action" data-community-refresh type="button" data-product-id="${esc2(selected.id)}">Refresh</button></div><div class="community-feed" data-community-feed data-product-id="${esc2(selected.id)}" data-owner="true" data-viewer-name="${esc2(business.name)}"><div class="community-feed-loading"><i class="cohort-spinner" aria-hidden="true"></i> Loading the conversation\u2026</div></div></section>`;
+    return `<div class="portal-page-heading"><div><span class="portal-kicker">MEMBER SPACE</span><h1>${esc3(selected.name)}</h1><p>${esc3(selected.description || "Share updates and keep your members close.")}</p></div><a class="portal-action" href="#business/community">All spaces</a></div>
+      <section class="portal-panel community-composer"><div class="community-composer-head"><span class="community-avatar">${esc3(initials(business.name))}</span><span><b>Post an update</b><small>Your active members will see this in their Cohort community.</small></span></div><form data-community-post-form data-product-id="${esc3(selected.id)}"><label class="sr-only" for="community-post-body">Your update</label><textarea id="community-post-body" name="body" maxlength="4000" rows="4" placeholder="Share a lesson, announcement, prompt, or useful link\u2026" required></textarea><div class="community-form-footer"><span>Plain text \xB7 up to 4,000 characters</span><button class="button button-primary" type="submit">Publish update</button></div><p class="auth-message" data-community-status role="status"></p></form></section>
+      <section class="community-feed-section"><div class="community-feed-heading"><div><h2>Member conversation</h2><p>Posts and replies from this space.</p></div><button class="portal-action" data-community-refresh type="button" data-product-id="${esc3(selected.id)}">Refresh</button></div><div class="community-feed" data-community-feed data-product-id="${esc3(selected.id)}" data-owner="true" data-viewer-name="${esc3(business.name)}">${skeletonFeed()}</div></section>`;
   }
-  const cards = spaces.map((product) => {
+  const cards = spaces.map((product, index) => {
     const members = (business.entitlements || []).filter((item) => item.product_id === product.id && active(item)).length;
-    return `<a class="community-space-card" href="#business/community/${encodeURIComponent(product.id)}"><span class="community-space-icon">\u2733</span><span class="community-space-main"><b>${esc2(product.name)}</b><small>${esc2(product.type)} \xB7 ${members} active ${members === 1 ? "member" : "members"}</small></span><span class="community-space-arrow" aria-hidden="true">\u2192</span></a>`;
+    return spaceCard({ href: `#business/community/${encodeURIComponent(product.id)}`, title: product.name, type: product.type, detail: `${members} active ${members === 1 ? "member" : "members"}`, action: "Manage space", index });
   }).join("");
   return `<div class="portal-page-heading"><div><span class="portal-kicker">AUDIENCE</span><h1>Community</h1><p>Bring your member updates and conversations into Cohort.</p></div><a class="button button-primary" href="#business/product-new">Create a membership</a></div>
     ${spaces.length ? `<section class="community-space-list">${cards}</section>` : `<section class="portal-panel"><div class="portal-empty-state"><span>\u2733</span><b>Start with a member space</b><p>Create a Community or Membership product. Its active members can then read your updates and reply from their own Cohort portal.</p><a class="button button-primary" href="#business/product-new">Create a member product</a></div></section>`}`;
@@ -21553,21 +21571,22 @@ function businessCommunity(business, productId = "") {
 function memberCommunity(membership) {
   const product = membership?.products || {};
   if (!membership || !active(membership)) return `<div class="portal-page-heading"><span class="portal-kicker">MEMBER SPACE</span><h1>Access ended</h1><p>This community is no longer available to your account.</p></div><a class="text-link" href="#portal/communities">Back to my communities \u2192</a>`;
-  return `<div class="portal-page-heading"><div><span class="portal-kicker">${esc2(membership.businesses?.name || "COHORT COMMUNITY")}</span><h1>${esc2(product.name || "Member space")}</h1><p>${esc2(product.headline || product.type || "Updates and conversation with your creator.")}</p></div><a class="portal-action" href="#portal/communities">All communities</a></div>
+  return `<div class="portal-page-heading"><div><span class="portal-kicker">${esc3(membership.businesses?.name || "COHORT COMMUNITY")}</span><h1>${esc3(product.name || "Member space")}</h1><p>${esc3(product.headline || product.type || "Updates and conversation with your creator.")}</p></div><a class="portal-action" href="#portal/communities">All communities</a></div>
     <section class="portal-panel community-composer member-reply-intro"><b>Welcome to the conversation</b><p>Read creator updates, ask a thoughtful question, or share what you\u2019re learning.</p></section>
-    <section class="community-feed-section"><div class="community-feed-heading"><div><h2>Latest updates</h2><p>From ${esc2(membership.businesses?.name || "your creator")} and the members in this space.</p></div><button class="portal-action" data-community-refresh type="button" data-product-id="${esc2(membership.product_id)}">Refresh</button></div><div class="community-feed" data-community-feed data-product-id="${esc2(membership.product_id)}" data-owner="false" data-viewer-name="${esc2(displayName(membership._viewerProfile))}"><div class="community-feed-loading"><i class="cohort-spinner" aria-hidden="true"></i> Loading the conversation\u2026</div></div></section>`;
+    <section class="community-feed-section"><div class="community-feed-heading"><div><h2>Latest updates</h2><p>From ${esc3(membership.businesses?.name || "your creator")} and the members in this space.</p></div><button class="portal-action" data-community-refresh type="button" data-product-id="${esc3(membership.product_id)}">Refresh</button></div><div class="community-feed" data-community-feed data-product-id="${esc3(membership.product_id)}" data-owner="false" data-viewer-name="${esc3(displayName(membership._viewerProfile))}">${skeletonFeed()}</div></section>`;
 }
 function memberCommunities(memberships = []) {
   const items = memberships.filter((item) => ["Community", "Membership"].includes(item.products?.type) && active(item));
-  const cards = items.map((item) => `<a class="community-space-card" href="#portal/community/${encodeURIComponent(item.product_id)}"><span class="community-space-icon">\u2733</span><span class="community-space-main"><b>${esc2(item.products?.name || "Member space")}</b><small>${esc2(item.businesses?.name || "Cohort creator")} \xB7 ${item.ends_at ? `Access until ${esc2(new Date(item.ends_at).toLocaleDateString("en-IN"))}` : "Active membership"}</small></span><span class="community-space-arrow" aria-hidden="true">\u2192</span></a>`).join("");
+  const cards = items.map((item, index) => spaceCard({ href: `#portal/community/${encodeURIComponent(item.product_id)}`, title: item.products?.name, type: item.products?.type, detail: `${item.businesses?.name || "Cohort creator"} \xB7 ${item.ends_at ? `Access until ${new Date(item.ends_at).toLocaleDateString("en-IN")}` : "Active membership"}`, index })).join("");
   return `<div class="portal-page-heading"><span class="portal-kicker">YOUR MEMBERSHIPS</span><h1>Communities</h1><p>Your creator spaces, conversations and member updates.</p></div>${cards ? `<div class="community-space-list">${cards}</div>` : `<section class="portal-panel"><div class="portal-empty-state"><span>\u2733</span><b>No active community spaces</b><p>When you join a creator\u2019s Community or Membership offer, its updates and discussions will show up here.</p><a class="button button-primary" href="#communities">Explore Cohort \u2192</a></div></section>`}`;
 }
 async function loadCommunityFeed(supabase2, productId) {
   const feed = [...document.querySelectorAll("[data-community-feed]")].find((node) => node.dataset.productId === productId);
   if (!feed) return;
+  feed.innerHTML = skeletonFeed();
   const { data: posts, error } = await supabase2.from("community_posts").select("id,product_id,author_id,author_name,body,pinned,created_at,community_comments(id,author_id,author_name,body,created_at)").eq("product_id", productId).order("pinned", { ascending: false }).order("created_at", { ascending: false });
   if (error) {
-    feed.innerHTML = `<div class="community-feed-empty"><b>Could not load this conversation</b><p>${esc2(error.message)}</p></div>`;
+    feed.innerHTML = `<div class="community-feed-empty"><b>Could not load this conversation</b><p>${esc3(error.message)}</p></div>`;
     return;
   }
   if (!posts?.length) {
@@ -21577,10 +21596,10 @@ async function loadCommunityFeed(supabase2, productId) {
   feed.innerHTML = posts.map((post2) => {
     const author = post2.author_name || "Cohort creator";
     const comments = (post2.community_comments || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    return `<article class="community-post"><header class="community-post-head"><span class="community-avatar">${esc2(initials(author))}</span><span class="community-post-author"><b>${esc2(author)}</b><small>${new Date(post2.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}${post2.pinned ? " \xB7 Pinned" : ""}</small></span>${feed.dataset.owner === "true" ? `<button class="community-delete" type="button" data-community-delete-post="${esc2(post2.id)}" aria-label="Delete post">Delete</button>` : ""}</header><div class="community-post-body">${esc2(post2.body).replace(/\r?\n/g, "<br>")}</div><div class="community-replies">${comments.map((comment) => {
+    return `<article class="community-post"><header class="community-post-head"><span class="community-avatar">${esc3(initials(author))}</span><span class="community-post-author"><b>${esc3(author)}</b><small>${new Date(post2.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}${post2.pinned ? " \xB7 Pinned" : ""}</small></span>${feed.dataset.owner === "true" ? `<button class="community-delete" type="button" data-community-delete-post="${esc3(post2.id)}" aria-label="Delete post">Delete</button>` : ""}</header><div class="community-post-body">${esc3(post2.body).replace(/\r?\n/g, "<br>")}</div><div class="community-replies">${comments.map((comment) => {
       const replyName = comment.author_name || "Cohort member";
-      return `<div class="community-reply"><span class="community-avatar community-avatar-small">${esc2(initials(replyName))}</span><div><div class="community-reply-meta"><b>${esc2(replyName)}</b><small>${new Date(comment.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</small></div><p>${esc2(comment.body).replace(/\r?\n/g, "<br>")}</p></div></div>`;
-    }).join("")}</div><form class="community-reply-form" data-community-reply-form data-post-id="${esc2(post2.id)}" data-product-id="${esc2(productId)}"><label class="sr-only" for="reply-${esc2(post2.id)}">Reply to ${esc2(author)}</label><input id="reply-${esc2(post2.id)}" name="body" maxlength="2000" placeholder="Write a helpful reply\u2026" required><button class="portal-action" type="submit">Reply</button></form></article>`;
+      return `<div class="community-reply"><span class="community-avatar community-avatar-small">${esc3(initials(replyName))}</span><div><div class="community-reply-meta"><b>${esc3(replyName)}</b><small>${new Date(comment.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</small></div><p>${esc3(comment.body).replace(/\r?\n/g, "<br>")}</p></div></div>`;
+    }).join("")}</div><form class="community-reply-form" data-community-reply-form data-post-id="${esc3(post2.id)}" data-product-id="${esc3(productId)}"><label class="sr-only" for="reply-${esc3(post2.id)}">Reply to ${esc3(author)}</label><input id="reply-${esc3(post2.id)}" name="body" maxlength="2000" placeholder="Write a helpful reply\u2026" required><button class="portal-action" type="submit">Reply</button></form></article>`;
   }).join("");
 }
 
@@ -21626,7 +21645,7 @@ function communicationCenterPage({ business = null, user, escapeHTML: escapeHTML
   const subhead = creatorMode ? "Keep customer questions and program conversations in one place." : "Your conversations with Cohort creators, all together.";
   return `<section class="communication-center" data-creator-mode="${creatorMode}">
     <header class="inbox-heading"><div><span class="portal-kicker">${creatorMode ? "AUDIENCE" : "YOUR COHORT"}</span><h1>${title}</h1><p>${subhead}</p></div>${creatorMode ? '<a class="inbox-secondary-action" href="#business/customers"><span aria-hidden="true">\uFF0B</span> Find a customer</a>' : '<a class="inbox-secondary-action" href="#explore">Explore creators <span aria-hidden="true">\u2197</span></a>'}</header>
-    <div class="inbox-shell" id="inbox-shell" aria-live="polite"><div class="inbox-loading"><span class="cohort-spinner" aria-hidden="true"></span><span>Loading your inbox\u2026</span></div></div>
+    <div class="inbox-shell" id="inbox-shell" aria-live="polite">${skeletonInbox()}</div>
   </section>`;
 }
 function participantName(row, creatorMode) {
@@ -21656,6 +21675,8 @@ async function loadCommunicationCenter(supabase2, { business = null, user, escap
   const shell = document.querySelector("#inbox-shell");
   if (!shell || !supabase2 || !user || shell.querySelector("#conversation-message-form")?.dataset.saving === "true") return;
   const request = ++inboxLoadSequence;
+  shell.setAttribute("aria-busy", "true");
+  shell.classList.add("is-refreshing");
   const creatorMode = Boolean(business && business.owner_id === user.id);
   const contextKey = creatorMode ? `creator:${business.id}` : `customer:${user.id}`;
   try {
@@ -21739,7 +21760,19 @@ async function loadCommunicationCenter(supabase2, { business = null, user, escap
       }).subscribe();
     }
   } catch (error) {
-    shell.innerHTML = `<div class="inbox-error"><span class="inbox-empty-icon">!</span><b>We couldn\u2019t load messages</b><p>${escapeHTML7(error?.message || "Please refresh and try again.")}</p><button class="inbox-secondary-action" type="button" data-inbox-refresh>Try again</button></div>`;
+    if (request !== inboxLoadSequence || !shell.isConnected) return;
+    const message = escapeHTML7(error?.message || "Please refresh and try again.");
+    if (shell.querySelector(".inbox-list-panel")) {
+      shell.querySelector(".inbox-inline-error")?.remove();
+      shell.insertAdjacentHTML("afterbegin", `<div class="inbox-inline-error" role="alert"><span>Couldn\u2019t refresh messages. ${message}</span><button type="button" data-inbox-refresh>Retry</button></div>`);
+    } else {
+      shell.innerHTML = `<div class="inbox-error"><span class="inbox-empty-icon">!</span><b>We couldn\u2019t load messages</b><p>${message}</p><button class="inbox-secondary-action" type="button" data-inbox-refresh>Try again</button></div>`;
+    }
+  } finally {
+    if (request === inboxLoadSequence) {
+      shell.removeAttribute("aria-busy");
+      shell.classList.remove("is-refreshing");
+    }
   }
 }
 async function createCustomerConversation(supabase2, { businessId, customerId, user }) {
@@ -21865,6 +21898,7 @@ var escapeHTML6 = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => (
 })[char]);
 var supabase;
 var currentUser = null;
+var workspaceLoading = true;
 var initError = "";
 function refreshBusinessNotifications() {
   const node = document.querySelector(".business-notifications");
@@ -21875,7 +21909,7 @@ function updateNav() {
   if (!actions) return;
   const profile = workspace.profile || {};
   actions.innerHTML = `<button class="icon-button nav-search-button" id="search-toggle" aria-label="Search Cohort" title="Search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
-    ${currentUser ? `<a class="public-account-link" href="#portal/profile"><span class="public-account-avatar" ${profile.avatar_url ? `style="background-image:url('${escapeHTML6(profile.avatar_url)}')"` : ""}>${profile.avatar_url ? "" : escapeHTML6(initialsFor2(displayName2()))}</span><span>My portal</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></a>` : `<a class="login-link" href="#login"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.5-3.4 2.8-5 7-5s6.5 1.6 7 5"/></svg>Log in</a><a class="button button-dark button-sm creator-nav-cta" href="#signup-creator">I\u2019m a creator <span aria-hidden="true">\u2197</span></a>`}
+    ${currentUser ? `<a class="public-account-link" href="#portal/profile" aria-label="My portal"><span class="public-account-avatar" ${profile.avatar_url ? `style="background-image:url('${escapeHTML6(profile.avatar_url)}')"` : ""}>${profile.avatar_url ? "" : escapeHTML6(initialsFor2(displayName2()))}</span><span>My portal</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></a>` : `<a class="login-link" href="#login"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.5-3.4 2.8-5 7-5s6.5 1.6 7 5"/></svg>Log in</a><a class="button button-dark button-sm creator-nav-cta" href="#signup-creator">I\u2019m a creator <span aria-hidden="true">\u2197</span></a>`}
     <button class="mobile-menu" id="mobile-menu" aria-label="Open menu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>`;
   document.querySelector("#search-toggle")?.addEventListener("click", () => {
     location.hash = "explore";
@@ -21883,6 +21917,7 @@ function updateNav() {
   document.querySelector("#mobile-menu")?.addEventListener("click", (event) => {
     const nav = document.querySelector(".main-nav"), open = nav?.classList.toggle("open");
     event.currentTarget.setAttribute("aria-expanded", String(Boolean(open)));
+    event.currentTarget.setAttribute("aria-label", open ? "Close menu" : "Open menu");
   });
 }
 function authPage(mode) {
@@ -21917,12 +21952,24 @@ function displayName2() {
 function initialsFor2(value) {
   return String(value || "G").trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join("").toUpperCase();
 }
+function revealActiveMobileNav() {
+  if (!window.matchMedia("(max-width: 600px)").matches) return;
+  const nav = document.querySelector(".business-nav, .portal-nav");
+  const active2 = nav?.querySelector('[aria-current="page"]');
+  if (!nav || !active2) return;
+  requestAnimationFrame(() => {
+    if (!active2.isConnected) return;
+    const item = active2.getBoundingClientRect(), area = nav.getBoundingClientRect();
+    nav.scrollLeft += item.left - area.left - (area.width - item.width) / 2;
+  });
+}
 function portalShell(content, active2 = "profile") {
   const name = displayName2(), business = getBusiness();
   const avatar = workspace.profile?.avatar_url ? `<span class="portal-avatar has-image" style="background-image:url('${escapeHTML6(workspace.profile.avatar_url)}')" aria-label="${escapeHTML6(name)}"></span>` : `<span class="portal-avatar">${escapeHTML6(initialsFor2(name))}</span>`;
-  return `<div class="portal-app"><header class="portal-topbar"><a class="portal-brand" href="#portal/profile"><span class="brand-mark">C</span><span>Cohort</span></a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search Cohort" aria-label="Search Cohort"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><a class="portal-icon-button" href="#portal/messages" aria-label="Messages" title="Messages"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 4a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg></a><button class="portal-account-button" id="portal-account-toggle" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-controls="portal-account-menu">${avatar}<span class="account-name">${escapeHTML6(name)}</span><svg class="account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button><div class="portal-account-menu" id="portal-account-menu" role="menu" aria-labelledby="portal-account-toggle" hidden><div class="account-menu-head">${avatar}<span><b>${escapeHTML6(name)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><a role="menuitem" class="account-menu-profile" href="#portal/profile"><span class="account-menu-icon">${iconSvg.partners}</span><span><b>View profile</b><small>Your public Cohort profile</small></span><span class="account-menu-arrow">\u2197</span></a><div class="account-menu-label">YOUR ACCOUNT</div><a role="menuitem" href="#portal/orders"><span class="account-menu-icon">\u25A4</span>Orders</a><a role="menuitem" href="#portal/library"><span class="account-menu-icon">\u25A6</span>My library</a><a role="menuitem" href="#portal/messages"><span class="account-menu-icon">${iconSvg.messages}</span>Messages</a><a role="menuitem" href="#portal/settings"><span class="account-menu-icon">${iconSvg.settings}</span>Settings</a><div class="account-menu-label">SUPPORT</div><a role="menuitem" href="#portal/help"><span class="account-menu-icon">?</span>Help and support</a><a role="menuitem" href="#portal/resolution"><span class="account-menu-icon">\u25C9</span>Resolution center</a><div class="account-menu-footer"><div class="theme-picks" aria-label="Appearance"><button data-theme="dark" aria-label="Dark appearance" title="Dark">\u25D0</button><button data-theme="light" aria-label="Light appearance" title="Light">\u263C</button></div><button class="account-signout" data-signout><span>\u21AA</span> Sign out</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar"><div class="portal-workspace-switch"><button class="workspace-selected" aria-label="Personal workspace">${escapeHTML6(initialsFor2(name))}</button>${business ? `<a class="workspace-business" href="#business/home" title="Open ${escapeHTML6(business.name)}">${escapeHTML6(initialsFor2(business.name))}</a>` : ""}${business ? `<button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add business">+</button>` : `<a href="#portal/create-business" aria-label="Create business">+</a>`}</div><span class="sidebar-label">Personal</span><nav class="portal-nav">${portalLinks.map(([route, label]) => `<a class="portal-nav-link ${active2 === route ? "active" : ""}" href="#portal/${route}"><span>${iconSvg[route] || iconSvg.communities}</span>${label}</a>`).join("")}</nav><div class="portal-sidebar-bottom"><a class="portal-nav-link ${active2 === "settings" ? "active" : ""}" href="#portal/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main">${content}</main></div></div>`;
+  return `<div class="portal-app"><header class="portal-topbar"><a class="portal-brand" href="#portal/profile"><span class="brand-mark">C</span><span>Cohort</span></a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search Cohort" aria-label="Search Cohort"><kbd>Ctrl K</kbd></form><div class="portal-top-actions"><a class="portal-icon-button" href="#portal/messages" aria-label="Messages" title="Messages"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 4a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg></a><button class="portal-account-button" id="portal-account-toggle" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-controls="portal-account-menu">${avatar}<span class="account-name">${escapeHTML6(name)}</span><svg class="account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button><div class="portal-account-menu" id="portal-account-menu" role="menu" aria-labelledby="portal-account-toggle" hidden><div class="account-menu-head">${avatar}<span><b>${escapeHTML6(name)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><a role="menuitem" class="account-menu-profile" href="#portal/profile"><span class="account-menu-icon">${iconSvg.partners}</span><span><b>View profile</b><small>Your public Cohort profile</small></span><span class="account-menu-arrow">\u2197</span></a><div class="account-menu-label">YOUR ACCOUNT</div><a role="menuitem" href="#portal/orders"><span class="account-menu-icon">\u25A4</span>Orders</a><a role="menuitem" href="#portal/library"><span class="account-menu-icon">\u25A6</span>My library</a><a role="menuitem" href="#portal/messages"><span class="account-menu-icon">${iconSvg.messages}</span>Messages</a><a role="menuitem" href="#portal/settings"><span class="account-menu-icon">${iconSvg.settings}</span>Settings</a><div class="account-menu-label">SUPPORT</div><a role="menuitem" href="#portal/help"><span class="account-menu-icon">?</span>Help and support</a><a role="menuitem" href="#portal/resolution"><span class="account-menu-icon">\u25C9</span>Resolution center</a><div class="account-menu-footer"><div class="theme-picks" aria-label="Appearance"><button data-theme="dark" aria-label="Dark appearance" title="Dark">\u25D0</button><button data-theme="light" aria-label="Light appearance" title="Light">\u263C</button></div><button class="account-signout" data-signout><span>\u21AA</span> Sign out</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar"><div class="portal-workspace-switch"><button class="workspace-selected" aria-label="Personal workspace">${escapeHTML6(initialsFor2(name))}</button>${business ? `<a class="workspace-business" href="#business/home" title="Open ${escapeHTML6(business.name)}">${escapeHTML6(initialsFor2(business.name))}</a>` : ""}${business ? `<button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add business">+</button>` : `<a href="#portal/create-business" aria-label="Create business">+</a>`}</div><span class="sidebar-label">Personal</span><nav class="portal-nav" aria-label="Personal workspace">${portalLinks.map(([route, label]) => `<a class="portal-nav-link ${active2 === route ? "active" : ""}" ${active2 === route ? 'aria-current="page"' : ""} href="#portal/${route}"><span>${iconSvg[route] || iconSvg.communities}</span>${label}</a>`).join("")}</nav><div class="portal-sidebar-bottom"><a class="portal-nav-link ${active2 === "settings" ? "active" : ""}" href="#portal/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main">${content}</main></div></div>`;
 }
 var bizSections = [["", [["home", "Home"], ["analytics", "Analytics"], ["products", "Products"], ["payments", "Payments"], ["customers", "Customers"], ["community", "Community"], ["access", "Access"], ["websites", "Websites"]]], ["Grow", [["ads", "Ads"], ["workforce", "Workforce"], ["affiliates", "Affiliates"]]], ["Operations", [["messages", "Messages"], ["cards", "Cards"], ["support", "Support"], ["more", "More"]]]];
+var bizLabel = { home: "Home", analytics: "Analytics", products: "Products", "product-new": "New product", payments: "Payments", customers: "Customers", community: "Community", messages: "Messages", access: "Access", websites: "Websites", ads: "Ads", workforce: "Workforce", affiliates: "Affiliates", cards: "Cards", support: "Support", more: "More", developer: "Developer", settings: "Settings" };
 function getBusiness() {
   return workspace.business;
 }
@@ -21933,7 +21980,7 @@ function ordersCustomerName(customerId) {
 function businessShell(content, active2, business) {
   const name = business.name || "Your business";
   const profileName = displayName2(), avatar = workspace.profile?.avatar_url ? `<span class="portal-avatar has-image" style="background-image:url('${escapeHTML6(workspace.profile.avatar_url)}')"></span>` : `<span class="portal-avatar">${escapeHTML6(initialsFor2(profileName))}</span>`;
-  return `<div class="portal-app business-app"><header class="portal-topbar"><a class="portal-brand" href="#business/home"><span class="brand-mark">C</span><span>Cohort</span></a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search ${escapeHTML6(name)}" aria-label="Search business"><kbd>Ctrl K</kbd></form><div class="portal-top-actions">${businessNotificationMarkup(workspace, escapeHTML6)}<button class="portal-account-button" id="portal-account-toggle" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-controls="portal-account-menu">${avatar}<span class="account-name">${escapeHTML6(profileName)}</span><svg class="account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button><div class="portal-account-menu business-account-menu" id="portal-account-menu" role="menu" aria-labelledby="portal-account-toggle" hidden><div class="account-menu-head">${avatar}<span><b>${escapeHTML6(profileName)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><div class="account-business-identity"><small>BUSINESS WORKSPACE</small><b>${escapeHTML6(name)}</b><span>@${escapeHTML6(business.handle || "")}</span></div><a role="menuitem" href="#portal/profile"><span class="account-menu-icon">${iconSvg.partners}</span>Personal portal</a><a role="menuitem" href="#business/settings"><span class="account-menu-icon">${iconSvg.settings}</span>Business settings</a><a role="menuitem" href="#business/messages"><span class="account-menu-icon">${iconSvg.messages}</span>Creator inbox</a><a role="menuitem" href="#portal/help"><span class="account-menu-icon">?</span>Help and support</a><div class="account-menu-footer"><div class="theme-picks" aria-label="Appearance"><button data-theme="dark" aria-label="Dark appearance" title="Dark">\u25D0</button><button data-theme="light" aria-label="Light appearance" title="Light">\u263C</button></div><button class="account-signout" data-signout><span>\u21AA</span> Sign out</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar business-sidebar"><div class="business-switcher"><a class="workspace-personal" href="#portal/profile" title="Personal portal">${escapeHTML6(initialsFor2(profileName))}</a><button class="workspace-selected business-switch-button" title="Current business">${escapeHTML6(initialsFor2(name))}</button><button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add another business">+</button></div><div class="business-side-title">${escapeHTML6(name)}<span>${escapeHTML6(business.status === "setup" ? "Setup" : "Business")}</span></div><nav class="business-nav">${bizSections.map(([group, items]) => `${group ? `<span class="biz-section-label">${group}</span>` : ""}${items.map(([key, label]) => `<a class="portal-nav-link ${active2 === key ? "active" : ""}" href="#business/${key}"><span class="biz-icon">${businessIcons[key] || iconSvg.communities}</span>${label}${key === "workforce" ? '<small class="biz-badge">Beta</small>' : ""}</a>`).join("")}`).join("")}<div class="business-more-links" id="business-more-links" hidden><a href="#business/developer">Developer</a><a href="#business/settings">Settings</a></div></nav><div class="business-side-bottom"><a class="portal-nav-link ${active2 === "developer" ? "active" : ""}" href="#business/developer"><span class="biz-icon">${businessIcons.more}</span>Developer</a><a class="portal-nav-link ${active2 === "settings" ? "active" : ""}" href="#business/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main business-main">${content}</main></div></div>`;
+  return `<div class="portal-app business-app"><header class="portal-topbar"><a class="portal-brand" href="#business/home"><span class="brand-mark">C</span><span>Cohort</span></a><form class="portal-search" id="portal-search-form"><span class="portal-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input name="query" placeholder="Search ${escapeHTML6(name)}" aria-label="Search business"><kbd>Ctrl K</kbd></form><div class="portal-top-actions">${businessNotificationMarkup(workspace, escapeHTML6)}<button class="portal-account-button" id="portal-account-toggle" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-controls="portal-account-menu">${avatar}<span class="account-name">${escapeHTML6(profileName)}</span><svg class="account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button><div class="portal-account-menu business-account-menu" id="portal-account-menu" role="menu" aria-labelledby="portal-account-toggle" hidden><div class="account-menu-head">${avatar}<span><b>${escapeHTML6(profileName)}</b><small>${escapeHTML6(currentUser?.email || "")}</small></span></div><div class="account-business-identity"><small>BUSINESS WORKSPACE</small><b>${escapeHTML6(name)}</b><span>@${escapeHTML6(business.handle || "")}</span></div><a role="menuitem" href="#portal/profile"><span class="account-menu-icon">${iconSvg.partners}</span>Personal portal</a><a role="menuitem" href="#business/settings"><span class="account-menu-icon">${iconSvg.settings}</span>Business settings</a><a role="menuitem" href="#business/messages"><span class="account-menu-icon">${iconSvg.messages}</span>Creator inbox</a><a role="menuitem" href="#portal/help"><span class="account-menu-icon">?</span>Help and support</a><div class="account-menu-footer"><div class="theme-picks" aria-label="Appearance"><button data-theme="dark" aria-label="Dark appearance" title="Dark">\u25D0</button><button data-theme="light" aria-label="Light appearance" title="Light">\u263C</button></div><button class="account-signout" data-signout><span>\u21AA</span> Sign out</button></div></div></div></header><div class="portal-layout"><aside class="portal-sidebar business-sidebar"><div class="business-switcher"><a class="workspace-personal" href="#portal/profile" title="Personal portal">${escapeHTML6(initialsFor2(profileName))}</a><button class="workspace-selected business-switch-button" title="Current business">${escapeHTML6(initialsFor2(name))}</button><button class="workspace-add" data-business-notice="Multiple business workspaces are coming soon." aria-label="Add another business">+</button></div><div class="business-side-title">${escapeHTML6(name)}<span>${escapeHTML6(business.status === "setup" ? "Setup" : "Business")}</span></div><nav class="business-nav" aria-label="Business workspace">${bizSections.map(([group, items]) => `${group ? `<span class="biz-section-label">${group}</span>` : ""}${items.map(([key, label]) => `<a class="portal-nav-link ${active2 === key ? "active" : ""}" ${active2 === key ? 'aria-current="page"' : ""} href="#business/${key}"><span class="biz-icon">${businessIcons[key] || iconSvg.communities}</span>${label}${key === "workforce" ? '<small class="biz-badge">Beta</small>' : ""}</a>`).join("")}`).join("")}<div class="business-more-links" id="business-more-links" hidden><a href="#business/developer">Developer</a><a href="#business/settings">Settings</a></div></nav><div class="business-side-bottom"><a class="portal-nav-link ${active2 === "developer" ? "active" : ""}" href="#business/developer"><span class="biz-icon">${businessIcons.more}</span>Developer</a><a class="portal-nav-link ${active2 === "settings" ? "active" : ""}" href="#business/settings"><span>${iconSvg.settings}</span>Settings</a></div></aside><main class="portal-main business-main">${content}</main></div></div>`;
 }
 function businessHeading4(kicker, title, copy = "", action = "") {
   return `<div class="portal-page-heading business-heading"><div><span class="portal-kicker">${kicker}</span><h1>${title}</h1>${copy ? `<p>${copy}</p>` : ""}</div>${action}</div>`;
@@ -21969,7 +22016,8 @@ function renderBusinessPage(route) {
   }
   const parts = route.split("/"), section = parts[1] || "home", id = ["product-edit", "community"].includes(section) ? parts.slice(2).join("/") : "";
   const page = businessPage(section, business, id);
-  app.innerHTML = businessShell(page, section === "product-edit" ? "products" : section, business);
+  app.innerHTML = businessShell(page, ["product-edit", "product-new"].includes(section) ? "products" : section, business);
+  revealActiveMobileNav();
   void bindBusinessNotificationRealtime(supabase, business, currentUser, workspace, () => {
     const node = document.querySelector(".business-notifications");
     if (node) node.outerHTML = businessNotificationMarkup(workspace, escapeHTML6);
@@ -22047,9 +22095,9 @@ function renderBusinessPage(route) {
       hidden = JSON.parse(localStorage.getItem("cohort-analytics-hidden") || "[]");
     } catch {
     }
-    document.querySelectorAll("[data-analytics-widget],[data-analytics-metric]").forEach((card) => {
-      const key = card.dataset.analyticsWidget || card.dataset.analyticsMetric;
-      card.hidden = hidden.includes(key);
+    document.querySelectorAll("[data-analytics-widget],[data-analytics-metric]").forEach((card2) => {
+      const key = card2.dataset.analyticsWidget || card2.dataset.analyticsMetric;
+      card2.hidden = hidden.includes(key);
     });
   }
   document.querySelectorAll("[data-traffic-tab]").forEach((tab) => tab.addEventListener("click", () => {
@@ -22091,8 +22139,14 @@ function renderAuthRoute() {
   const portalRoutes = ["portal/profile", "portal/home", "portal/orders", "portal/library", "portal/messages", "portal/partners", "portal/affiliates", "portal/workforce", "portal/communities", "portal/settings", "portal/create-business", "portal/onboarding", "portal/resolution", "portal/help", "portal/language", "portal/legal"];
   const isMemberCommunity = route.startsWith("portal/community/");
   const isBusinessRoute = route.startsWith("business/");
+  if (isBusinessRoute) document.title = `${bizLabel[route.split("/")[1]] || "Workspace"} \u2014 Cohort`;
+  else if (portalRoutes.includes(route) || isMemberCommunity) document.title = `${isMemberCommunity ? "Community" : portalLinks.find(([key]) => key === route.split("/")[1])?.[1] || "Your portal"} \u2014 Cohort`;
   document.body.classList.toggle("portal-mode", portalRoutes.includes(route) || isMemberCommunity || isBusinessRoute);
   document.body.classList.toggle("portal-light", (portalRoutes.includes(route) || isMemberCommunity || isBusinessRoute) && localStorage.getItem("cohort-portal-theme") === "light");
+  if (workspaceLoading && (portalRoutes.includes(route) || isMemberCommunity || isBusinessRoute)) {
+    app.innerHTML = skeletonWorkspace();
+    return;
+  }
   if (route === "home") {
     document.body.classList.remove("portal-mode", "portal-light");
     updateNav();
@@ -22119,6 +22173,7 @@ function renderAuthRoute() {
   }
   if (portalRoutes.includes(route) || isMemberCommunity) {
     app.innerHTML = portalPage(isMemberCommunity ? route.slice("portal/".length) : route.split("/")[1]);
+    revealActiveMobileNav();
     if (isMemberCommunity) void loadCommunityFeed(supabase, route.slice("portal/community/".length));
     if (route === "portal/messages") void loadCommunicationCenter(supabase, { business: null, user: currentUser, escapeHTML: escapeHTML6, initialsFor: initialsFor2 });
   }
@@ -22428,9 +22483,9 @@ document.addEventListener("submit", async (event) => {
         if (!["https:", "http:"].includes(resourceUrl.protocol)) throw new Error("Resource links must start with http:// or https://.");
       }
       if (deliverable && deliverable.size > 50 * 1024 * 1024) throw new Error("Product files must be 50 MB or smaller.");
-      [...form.querySelectorAll("[data-pricing-option]")].forEach((card, i) => {
-        const val = (prefix) => card.querySelector(`[name^="${prefix}_"]`), cadence = val("pricing_cadence")?.value || "once", amount = Number(val("pricing_amount")?.value || 0), checkoutQuestions = !!val("pricing_questions")?.checked, questions = [...card.querySelectorAll("[data-question-source]")].map((row) => ({ title: row.querySelector('[name^="checkout_title_"]')?.value.trim() || "", placeholder: row.querySelector('[name^="checkout_placeholder_"]')?.value.trim() || "", optional: !!row.querySelector('[name^="checkout_optional_"]')?.checked })).filter((q) => q.title || q.placeholder);
-        pricingOptions.push({ id: card.dataset.priceId || null, name: val("pricing_internal_enabled")?.checked ? val("pricing_internal")?.value.trim() || "Internal plan" : cadence === "once" ? "One-time" : cadence, amount, currency: "INR", cadence, checkoutQuestions, questions, stock: val("pricing_stock")?.value ? Number(val("pricing_stock").value) : null, waitlist: !!val("pricing_waitlist")?.checked, hideFromStore: !!val("pricing_hidden")?.checked, autoExpire: !!val("pricing_expire")?.checked, expireDays: Number(val("pricing_expire_days")?.value || 30), allowMultiple: !!val("pricing_multiple")?.checked, internalName: val("pricing_internal_enabled")?.checked ? val("pricing_internal")?.value.trim() || "" : "", buttonText: val("pricing_button")?.value || "default" });
+      [...form.querySelectorAll("[data-pricing-option]")].forEach((card2, i) => {
+        const val = (prefix) => card2.querySelector(`[name^="${prefix}_"]`), cadence = val("pricing_cadence")?.value || "once", amount = Number(val("pricing_amount")?.value || 0), checkoutQuestions = !!val("pricing_questions")?.checked, questions = [...card2.querySelectorAll("[data-question-source]")].map((row) => ({ title: row.querySelector('[name^="checkout_title_"]')?.value.trim() || "", placeholder: row.querySelector('[name^="checkout_placeholder_"]')?.value.trim() || "", optional: !!row.querySelector('[name^="checkout_optional_"]')?.checked })).filter((q) => q.title || q.placeholder);
+        pricingOptions.push({ id: card2.dataset.priceId || null, name: val("pricing_internal_enabled")?.checked ? val("pricing_internal")?.value.trim() || "Internal plan" : cadence === "once" ? "One-time" : cadence, amount, currency: "INR", cadence, checkoutQuestions, questions, stock: val("pricing_stock")?.value ? Number(val("pricing_stock").value) : null, waitlist: !!val("pricing_waitlist")?.checked, hideFromStore: !!val("pricing_hidden")?.checked, autoExpire: !!val("pricing_expire")?.checked, expireDays: Number(val("pricing_expire_days")?.value || 30), allowMultiple: !!val("pricing_multiple")?.checked, internalName: val("pricing_internal_enabled")?.checked ? val("pricing_internal")?.value.trim() || "" : "", buttonText: val("pricing_button")?.value || "default" });
       });
       const name = String(data.get("product_name") || "").trim(), visibility = String(data.get("visibility") || "draft"), product = { business_id: b.id, slug: old?.slug || slugify(name), name, headline: String(data.get("headline") || "").trim() || null, type: String(data.get("product_type") || "Digital product"), description: String(data.get("description") || "").trim(), faqs, media_url: form.dataset.mediaPreviewOnly === "true" ? "" : form.dataset.mediaUrl || old?.mediaUrl || null, status: old?.status === "archived" ? "archived" : visibility, listed: visibility === "visible" };
       setProductSaveState(form, "Saving product details\xE2\u20AC\xA6");
@@ -23017,10 +23072,10 @@ document.addEventListener("click", async (event) => {
     return;
   }
   if (target.matches("[data-pricing-edit]")) {
-    const card = target.closest("[data-pricing-option]"), modal = document.createElement("div");
-    modal.innerHTML = pricingOptionDialog(card);
+    const card2 = target.closest("[data-pricing-option]"), modal = document.createElement("div");
+    modal.innerHTML = pricingOptionDialog(card2);
     const backdrop = modal.firstElementChild;
-    backdrop._pricingCard = card;
+    backdrop._pricingCard = card2;
     document.body.append(backdrop);
     backdrop.addEventListener("click", (e) => {
       if (e.target === backdrop) backdrop.remove();
@@ -23028,21 +23083,21 @@ document.addEventListener("click", async (event) => {
     return;
   }
   if (target.matches("[data-pricing-done]")) {
-    const backdrop = target.closest(".pricing-modal-backdrop"), card = backdrop?._pricingCard;
-    if (!card) return;
-    savePricingOptionDialog(card, backdrop);
-    const amount = Number(card.querySelector('[name^="pricing_amount_"]')?.value || 0), cadence = card.querySelector('[name^="pricing_cadence_"]')?.value || "once", preview = document.querySelector("#product-preview-price");
+    const backdrop = target.closest(".pricing-modal-backdrop"), card2 = backdrop?._pricingCard;
+    if (!card2) return;
+    savePricingOptionDialog(card2, backdrop);
+    const amount = Number(card2.querySelector('[name^="pricing_amount_"]')?.value || 0), cadence = card2.querySelector('[name^="pricing_cadence_"]')?.value || "once", preview = document.querySelector("#product-preview-price");
     if (preview) preview.innerHTML = `&#8377;${amount.toLocaleString("en-IN")}${cadence !== "once" ? ` / ${escapeHTML6(cadence)}` : ""}`;
     backdrop.remove();
     return;
   }
   if (target.matches("[data-pricing-delete]")) {
-    const backdrop = target.closest(".pricing-modal-backdrop"), card = backdrop?._pricingCard, list = document.querySelector("#pricing-options-list");
+    const backdrop = target.closest(".pricing-modal-backdrop"), card2 = backdrop?._pricingCard, list = document.querySelector("#pricing-options-list");
     if (list?.querySelectorAll("[data-pricing-option]").length <= 1) {
       portalToast("Keep at least one pricing option.");
       return;
     }
-    card?.remove();
+    card2?.remove();
     backdrop?.remove();
     return;
   }
@@ -23264,9 +23319,9 @@ document.addEventListener("change", (event) => {
     }
     hidden = target.checked ? hidden.filter((x) => x !== key) : [.../* @__PURE__ */ new Set([...hidden, key])];
     localStorage.setItem("cohort-analytics-hidden", JSON.stringify(hidden));
-    document.querySelectorAll("[data-analytics-widget],[data-analytics-metric]").forEach((card) => {
-      const name = card.dataset.analyticsWidget || card.dataset.analyticsMetric;
-      card.hidden = hidden.includes(name);
+    document.querySelectorAll("[data-analytics-widget],[data-analytics-metric]").forEach((card2) => {
+      const name = card2.dataset.analyticsWidget || card2.dataset.analyticsMetric;
+      card2.hidden = hidden.includes(name);
     });
   }
   if (target.matches("[data-dialog-questions]")) {
@@ -23344,20 +23399,25 @@ document.addEventListener("change", (event) => {
   }
 });
 window.addEventListener("hashchange", renderAuthRoute);
+renderAuthRoute();
 try {
   supabase = await connectSupabase();
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
   currentUser = data.session?.user || null;
   await loadWorkspaceData(supabase, currentUser);
+  workspaceLoading = false;
   supabase.auth.onAuthStateChange((event, session) => {
     currentUser = session?.user || null;
+    if (currentUser && workspace.profile?.id !== currentUser.id) workspaceLoading = true;
     updateNav();
     setTimeout(async () => {
       try {
         await loadWorkspaceData(supabase, currentUser);
+        workspaceLoading = false;
         renderAuthRoute();
       } catch (loadError) {
+        workspaceLoading = false;
         initError = loadError?.message || "";
         renderAuthRoute();
       }
@@ -23374,7 +23434,9 @@ try {
   } };
   renderAuthRoute();
 } catch (error) {
+  workspaceLoading = false;
   initError = error?.message || "Supabase could not be reached.";
+  window.cohortCatalogError = true;
   window.cohortMarketProducts = [];
   window.dispatchEvent(new CustomEvent("cohort:catalog-ready"));
   renderAuthRoute();
